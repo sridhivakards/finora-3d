@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import DashboardSidebar from '@/components/DashboardSidebar';
-import { FinoraStore } from '@/lib/storage';
-import { isSupabaseConfigured } from '@/lib/supabase';
+import { db } from '@/lib/db';
+import { createBrowserClient } from '@supabase/ssr';
 import {
   Settings as SettingsIcon,
   Database,
@@ -15,40 +15,63 @@ import {
   Check,
   User,
   ExternalLink,
-  Layers
+  Layers,
+  LogOut
 } from 'lucide-react';
 
 export default function SettingsPage() {
   const [cleared, setCleared] = useState(false);
   const [resetDone, setResetDone] = useState(false);
+  const [exportDone, setExportDone] = useState(false);
+  const [isSupabaseConfigured, setIsSupabaseConfigured] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
 
-  const handleResetDemo = () => {
-    FinoraStore.resetToDemoData();
-    setResetDone(true);
-    setTimeout(() => setResetDone(false), 2500);
+  useEffect(() => {
+    // Check if Supabase is configured
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
+    const configured = !!(url && key && !url.includes('placeholder') && !key.includes('placeholder'));
+    setIsSupabaseConfigured(configured);
+
+    if (configured) {
+      const supabase = createBrowserClient(url, key);
+      supabase.auth.getUser().then(({ data }) => {
+        setUserEmail(data.user?.email ?? '');
+      });
+    }
+  }, []);
+
+  const handleExportBackup = async () => {
+    try {
+      const [transactions, budgets, goals, bills, investments] = await Promise.all([
+        db.transactions.list(),
+        db.budgets.list(),
+        db.goals.list(),
+        db.bills.list(),
+        db.investments.list(),
+      ]);
+      const backup = { transactions, budgets, goals, bills, investments, exportedAt: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Finora_Full_Backup_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      setExportDone(true);
+      setTimeout(() => setExportDone(false), 2500);
+    } catch (err) {
+      console.error('Export failed:', err);
+    }
   };
 
-  const handleClearAll = () => {
-    FinoraStore.clearAllData();
-    setCleared(true);
-    setTimeout(() => setCleared(false), 2500);
-  };
-
-  const handleExportBackup = () => {
-    const backup = {
-      transactions: FinoraStore.getTransactions(),
-      budgets: FinoraStore.getBudgets(),
-      goals: FinoraStore.getGoals(),
-      bills: FinoraStore.getBills(),
-      investments: FinoraStore.getInvestments(),
-      exportedAt: new Date().toISOString(),
-    };
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Finora_Full_Backup_${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
+  const handleSignOut = async () => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
+    if (url && key) {
+      const supabase = createBrowserClient(url, key);
+      await supabase.auth.signOut();
+    }
+    window.location.href = '/';
   };
 
   return (
@@ -116,44 +139,36 @@ export default function SettingsPage() {
             </p>
 
             <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 font-mono text-[11px] text-slate-300 space-y-1">
-              <div>NEXT_PUBLIC_SUPABASE_URL = {process.env.NEXT_PUBLIC_SUPABASE_URL || 'Configured via .env.local'}</div>
-              <div>NEXT_PUBLIC_SUPABASE_ANON_KEY = {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '••••••••••••••••' : 'Configured via .env.local'}</div>
+              <div>NEXT_PUBLIC_SUPABASE_URL = {isSupabaseConfigured ? '••••••••••••' : 'Not configured'}</div>
+              <div>NEXT_PUBLIC_SUPABASE_ANON_KEY = {isSupabaseConfigured ? '••••••••••••••••' : 'Not configured'}</div>
+              {userEmail && <div className="text-cyan-400 mt-1">Signed in as: {userEmail}</div>}
             </div>
           </div>
 
-          {/* Data Controls & Testing Empty States */}
           <div className="p-6 rounded-2xl bg-[#0c1222] border border-slate-800 shadow-xl space-y-4">
             <h3 className="text-base font-bold text-white flex items-center gap-2">
               <Layers className="w-4 h-4 text-cyan-400" />
-              <span>Data Management & State Testing</span>
+              <span>Data Management</span>
             </h3>
             <p className="text-xs text-slate-400">
-              Easily toggle between authentic demo data or test empty dashboard states as required for client reviews and recruitment evaluation.
+              Export a full JSON backup of all your Finora financial records from Supabase.
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-              <button
-                onClick={handleResetDemo}
-                className="p-3 rounded-xl bg-slate-900 border border-slate-700 hover:border-cyan-500 text-xs font-semibold text-slate-200 hover:text-white flex items-center justify-center gap-2 transition-all"
-              >
-                {resetDone ? <Check className="w-4 h-4 text-emerald-400" /> : <RotateCcw className="w-4 h-4 text-cyan-400" />}
-                <span>{resetDone ? 'Demo Data Restored!' : 'Reset Demo Data'}</span>
-              </button>
-
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
               <button
                 onClick={handleExportBackup}
                 className="p-3 rounded-xl bg-slate-900 border border-slate-700 hover:border-cyan-500 text-xs font-semibold text-slate-200 hover:text-white flex items-center justify-center gap-2 transition-all"
               >
-                <Download className="w-4 h-4 text-indigo-400" />
-                <span>Export Backup (JSON)</span>
+                {exportDone ? <Check className="w-4 h-4 text-emerald-400" /> : <Download className="w-4 h-4 text-indigo-400" />}
+                <span>{exportDone ? 'Download started!' : 'Export All Data (JSON)'}</span>
               </button>
 
               <button
-                onClick={handleClearAll}
+                onClick={handleSignOut}
                 className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 text-xs font-semibold text-rose-300 flex items-center justify-center gap-2 transition-all"
               >
-                {cleared ? <Check className="w-4 h-4 text-emerald-400" /> : <Trash2 className="w-4 h-4 text-rose-400" />}
-                <span>{cleared ? 'Cleared!' : 'Test Empty State'}</span>
+                <LogOut className="w-4 h-4 text-rose-400" />
+                <span>Sign Out</span>
               </button>
             </div>
           </div>

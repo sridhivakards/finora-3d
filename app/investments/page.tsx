@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import DashboardSidebar from '@/components/DashboardSidebar';
 import DonutChart3D, { ExpenseCategory } from '@/components/3d/DonutChart3D';
-import { FinoraStore } from '@/lib/storage';
+import { db } from '@/lib/db';
 import { formatINR } from '@/lib/utils';
 import { Investment } from '@/lib/types';
 import {
@@ -38,14 +38,24 @@ export default function InvestmentsPage() {
   const [currentValue, setCurrentValue] = useState('');
   const [notes, setNotes] = useState('');
 
-  const loadData = () => {
-    setInvestments(FinoraStore.getInvestments());
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const loadData = async () => {
+    try {
+      setErrorMsg('');
+      const data = await db.investments.list();
+      setInvestments(data);
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Failed to load investments.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     loadData();
-    window.addEventListener('finora-data-updated', loadData);
-    return () => window.removeEventListener('finora-data-updated', loadData);
   }, []);
 
   const totalInvested = investments.reduce((s, i) => s + i.invested_amount, 0);
@@ -85,29 +95,31 @@ export default function InvestmentsPage() {
     });
   }, [pieData, investments]);
 
-  const handleAddInvestment = (e: React.FormEvent) => {
+  const handleAddInvestment = async (e: React.FormEvent) => {
     e.preventDefault();
     const inv = parseFloat(investedAmount);
     const cur = parseFloat(currentValue);
     if (!name.trim() || isNaN(inv) || isNaN(cur)) return;
-
-    const list = FinoraStore.getInvestments();
-    const newInv: Investment = {
-      id: 'inv-' + Date.now(),
-      name: name.trim(),
-      category,
-      invested_amount: inv,
-      current_value: cur,
-      notes: notes.trim() || undefined,
-    };
-
-    FinoraStore.saveInvestments([...list, newInv]);
-    setName('');
-    setInvestedAmount('');
-    setCurrentValue('');
-    setNotes('');
-    setModalOpen(false);
-    loadData();
+    setSubmitting(true);
+    try {
+      await db.investments.add({
+        name: name.trim(),
+        category,
+        invested_amount: inv,
+        current_value: cur,
+        notes: notes.trim() || undefined,
+      });
+      setName('');
+      setInvestedAmount('');
+      setCurrentValue('');
+      setNotes('');
+      setModalOpen(false);
+      await loadData();
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Failed to add investment.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import DashboardSidebar from '@/components/DashboardSidebar';
-import { FinoraStore } from '@/lib/storage';
+import { db } from '@/lib/db';
 import { formatINR, formatDate } from '@/lib/utils';
 import { Budget, TransactionCategory, Transaction } from '@/lib/types';
 import {
@@ -212,18 +212,31 @@ export default function BudgetsPage() {
   const [selectedCat, setSelectedCat] = useState<TransactionCategory>('Food');
   const [targetAmount, setTargetAmount] = useState('');
 
-  const loadData = () => {
-    const b = FinoraStore.getBudgets();
-    setBudgets(b);
-    const sum = FinoraStore.getFinancialSummary();
-    setCategorySpending(sum.categorySpending);
-    setTransactions(FinoraStore.getTransactions());
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const loadData = async () => {
+    try {
+      setErrorMsg('');
+      const [b, txs] = await Promise.all([
+        db.budgets.list(),
+        db.transactions.list(),
+      ]);
+      setBudgets(b);
+      setTransactions(txs);
+      const sum = db.computeSummary(txs);
+      setCategorySpending(sum.categorySpending);
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Failed to load budget data.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     loadData();
-    window.addEventListener('finora-data-updated', loadData);
-    return () => window.removeEventListener('finora-data-updated', loadData);
   }, []);
 
   // When active modal opens, sync slider
@@ -234,54 +247,67 @@ export default function BudgetsPage() {
     }
   }, [activeModalBudget]);
 
-  const handleSaveBudget = (e: React.FormEvent) => {
+  const handleSaveBudget = async (e: React.FormEvent) => {
     e.preventDefault();
     const amt = parseFloat(targetAmount);
     if (isNaN(amt) || amt <= 0) return;
-
-    FinoraStore.addBudget({
-      category: selectedCat,
-      amount: amt,
-      month: '2026-09',
-    });
-
-    setTargetAmount('');
-    setCreateModalOpen(false);
-    loadData();
-  };
-
-  const handleUpdateActiveBudget = (newAmt: number) => {
-    if (!activeModalBudget) return;
-    FinoraStore.addBudget({
-      category: activeModalBudget.category,
-      amount: newAmt,
-      month: activeModalBudget.month || '2026-09',
-    });
-    setSavedFeedback(true);
-    setTimeout(() => setSavedFeedback(false), 2000);
-    loadData();
-    // Update local modal view
-    setActiveModalBudget((prev) => (prev ? { ...prev, amount: newAmt } : null));
-  };
-
-  const handleDeleteBudget = (id: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    FinoraStore.deleteBudget(id);
-    if (activeModalBudget?.id === id) {
-      setActiveModalBudget(null);
+    setSaving(true);
+    try {
+      await db.budgets.upsert({
+        category: selectedCat,
+        amount: amt,
+        month: currentMonth,
+      });
+      setTargetAmount('');
+      setCreateModalOpen(false);
+      await loadData();
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Failed to save budget.');
+    } finally {
+      setSaving(false);
     }
-    loadData();
   };
 
-  // Calculations
+  const handleUpdateActiveBudget = async (newAmt: number) => {
+    if (!activeModalBudget) return;
+    setSaving(true);
+    try {
+      await db.budgets.upsert({
+        category: activeModalBudget.category,
+        amount: newAmt,
+        month: activeModalBudget.month || currentMonth,
+      });
+      setSavedFeedback(true);
+      setTimeout(() => setSavedFeedback(false), 2000);
+      await loadData();
+      setActiveModalBudget((prev) => (prev ? { ...prev, amount: newAmt } : null));
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Failed to update budget.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteBudget = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    try {
+      await db.budgets.delete(id);
+      if (activeModalBudget?.id === id) setActiveModalBudget(null);
+      await loadData();
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Failed to delete budget.');
+    }
+  };
+
   const totalBudgetCap = budgets.reduce((acc, b) => acc + b.amount, 0);
   const totalSpentAcrossBudgets = budgets.reduce((acc, b) => acc + (categorySpending[b.category] || 0), 0);
   const totalRemaining = totalBudgetCap - totalSpentAcrossBudgets;
   const overallUsedPct = totalBudgetCap > 0 ? Math.round((totalSpentAcrossBudgets / totalBudgetCap) * 100) : 0;
 
-  // Days left in current month (Sept 2026 = 30 days)
-  const daysInMonth = 30;
-  const currentDay = 28;
+  // Days left in current month
+  const now = new Date();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const currentDay = now.getDate();
   const daysRemaining = Math.max(1, daysInMonth - currentDay + 1);
 
   // Existing categories with budget

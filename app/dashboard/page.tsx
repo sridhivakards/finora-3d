@@ -5,7 +5,7 @@ import Link from 'next/link';
 import DashboardSidebar from '@/components/DashboardSidebar';
 import AddTransactionModal from '@/components/AddTransactionModal';
 import DonutChart3D, { ExpenseCategory } from '@/components/3d/DonutChart3D';
-import { FinoraStore } from '@/lib/storage';
+import { db, FinancialSummary } from '@/lib/db';
 import { formatINR, formatDate } from '@/lib/utils';
 import { Transaction, FinancialHealthScore } from '@/lib/types';
 import {
@@ -55,38 +55,81 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [summary, setSummary] = useState({
+  const [summary, setSummary] = useState<FinancialSummary>({
     totalIncome: 0,
     totalExpenses: 0,
     currentBalance: 0,
     savingsRate: 0,
-    nextMonthPrediction: 0,
-    categorySpending: {} as Record<string, number>,
-    transactionCount: 0
+    categorySpending: {},
+    transactionCount: 0,
   });
+  const [nextMonthPrediction, setNextMonthPrediction] = useState(0);
   const [health, setHealth] = useState<FinancialHealthScore>({
-    score: 78,
-    rating: 'Good',
-    explanation: 'Calculating financial diagnostic...',
+    score: 0,
+    rating: 'Fair',
+    explanation: 'Add transactions to see your financial health score.',
     factors: []
   });
+  const [cashflowTrend, setCashflowTrend] = useState<{ month: string; Income: number; Expenses: number }[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
-  const [isClient, setIsClient] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const loadData = () => {
-    const txs = FinoraStore.getTransactions();
-    const sum = FinoraStore.getFinancialSummary();
-    const hlth = FinoraStore.getFinancialHealth();
-    setTransactions(txs);
-    setSummary(sum);
-    setHealth(hlth);
+  const loadData = async () => {
+    try {
+      setError('');
+      const [txs, trend] = await Promise.all([
+        db.transactions.list(),
+        db.transactions.getMonthlyTrend(),
+      ]);
+      const sum = db.computeSummary(txs);
+      setTransactions(txs);
+      setSummary(sum);
+      setCashflowTrend(trend);
+
+      // Compute health score from real data
+      const score = Math.min(99, Math.max(15,
+        50 +
+        (sum.savingsRate >= 50 ? 25 : sum.savingsRate >= 25 ? 18 : sum.savingsRate > 0 ? 8 : -15) +
+        (txs.filter(t => t.is_unusual).length === 0 ? 10 : -5)
+      ));
+      const rating: FinancialHealthScore['rating'] =
+        score >= 80 ? 'Excellent' : score >= 65 ? 'Good' : score >= 45 ? 'Fair' : 'Poor';
+      setHealth({
+        score,
+        rating,
+        explanation: txs.length === 0
+          ? 'Add transactions to generate your financial health score.'
+          : `Your financial health score is ${score}/100. Savings rate: ${sum.savingsRate}%.`,
+        factors: []
+      });
+
+      // Fetch ML prediction
+      if (txs.length > 0) {
+        const expenseTotals = trend.map(t => t.Expenses).filter(v => v > 0);
+        if (expenseTotals.length > 0) {
+          try {
+            const predRes = await fetch('/api/predict', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ expenses: expenseTotals }),
+            });
+            if (predRes.ok) {
+              const predData = await predRes.json();
+              setNextMonthPrediction(predData.predicted_next_month ?? 0);
+            }
+          } catch { /* prediction unavailable */ }
+        }
+      }
+    } catch (err: any) {
+      setError(err?.message ?? 'Failed to load data. Please refresh.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    setIsClient(true);
     loadData();
-    window.addEventListener('finora-data-updated', loadData);
-    return () => window.removeEventListener('finora-data-updated', loadData);
   }, []);
 
   // 360° 3D Donut Chart Category Data
@@ -133,22 +176,26 @@ export default function DashboardPage() {
     }
   ];
 
-  // Income vs Expenses 6-Month Trend Data for Line Chart
-  const cashflowTrend = [
-    { month: 'Apr', Income: 85000, Expenses: 22000 },
-    { month: 'May', Income: 85000, Expenses: 19500 },
-    { month: 'Jun', Income: 88000, Expenses: 24000 },
-    { month: 'Jul', Income: 88000, Expenses: 21500 },
-    { month: 'Aug', Income: 90000, Expenses: 23100 },
-    { month: 'Sep', Income: summary.totalIncome, Expenses: summary.totalExpenses },
-  ];
+  // cashflowTrend is now loaded from Supabase in loadData()
 
-  if (!isClient) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-[#060913] flex items-center justify-center">
         <div className="flex items-center gap-3 text-cyan-400 font-mono text-sm">
           <span className="w-3 h-3 rounded-full bg-cyan-400 animate-ping" />
-          INITIALIZING FINORA SYSTEM...
+          Loading your financial data...
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#060913] flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-rose-400 font-semibold mb-2">Failed to load dashboard</p>
+          <p className="text-slate-400 text-sm mb-4">{error}</p>
+          <button onClick={loadData} className="px-4 py-2 rounded-xl bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-sm">Retry</button>
         </div>
       </div>
     );
@@ -179,14 +226,6 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => FinoraStore.resetToDemoData()}
-              title="Reset to realistic Indian demo transactions"
-              className="p-2 rounded-xl bg-slate-900 border border-slate-700 hover:border-slate-500 text-slate-400 hover:text-white text-xs font-medium flex items-center gap-1.5 transition-all"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Reset Demo</span>
-            </button>
             <Link
               href="/universe"
               className="px-3.5 py-2 rounded-xl bg-violet-600/20 border border-violet-500/40 text-violet-300 hover:bg-violet-600/30 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
@@ -224,12 +263,6 @@ export default function DashboardPage() {
                   className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-semibold text-sm shadow-lg shadow-cyan-500/20"
                 >
                   + Add First Transaction
-                </button>
-                <button
-                  onClick={() => FinoraStore.resetToDemoData()}
-                  className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium"
-                >
-                  Load Sample Indian Finances
                 </button>
               </div>
             </div>
@@ -313,11 +346,11 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div className="text-2xl font-black tracking-tight text-amber-300">
-                    {formatINR(summary.nextMonthPrediction)}
+                    {nextMonthPrediction > 0 ? formatINR(nextMonthPrediction) : '—'}
                   </div>
                   <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-400 font-medium">
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>Gradient Boosting Est.</span>
+                    <span>{nextMonthPrediction > 0 ? 'Gradient Boosting Est.' : 'Add data for forecast'}</span>
                   </div>
                 </div>
               </div>
@@ -679,7 +712,7 @@ export default function DashboardPage() {
       <AddTransactionModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        onSuccess={loadData}
+        onSuccess={() => { loadData(); }}
       />
     </div>
   );

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   ArrowLeftRight,
@@ -22,7 +22,7 @@ import {
   Menu,
   X
 } from 'lucide-react';
-import { FinoraStore } from '@/lib/storage';
+import { createBrowserClient } from '@supabase/ssr';
 import AddTransactionModal from './AddTransactionModal';
 
 const NAV_ITEMS = [
@@ -41,8 +41,37 @@ const NAV_ITEMS = [
 
 export default function DashboardSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
+  const [displayName, setDisplayName] = useState('User');
+
+  useEffect(() => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
+    if (url && key) {
+      const supabase = createBrowserClient(url, key);
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user) {
+          const email = user.email || '';
+          setUserEmail(email);
+          const name = user.user_metadata?.full_name || email.split('@')[0] || 'User';
+          setDisplayName(name);
+        }
+      });
+    }
+  }, []);
+
+  const handleSignOut = async () => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
+    if (url && key) {
+      const supabase = createBrowserClient(url, key);
+      await supabase.auth.signOut();
+    }
+    router.push('/login');
+  };
 
   return (
     <>
@@ -146,21 +175,21 @@ export default function DashboardSidebar() {
         <div className="p-4 border-t border-slate-800/80 bg-slate-950/40">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center font-bold text-xs text-white">
-                D
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center font-bold text-xs text-white uppercase">
+                {displayName.charAt(0)}
               </div>
               <div className="overflow-hidden">
-                <p className="text-xs font-semibold text-white truncate">Dhilikesh</p>
+                <p className="text-xs font-semibold text-white truncate">{displayName}</p>
                 <p className="text-[10px] text-slate-400 truncate font-mono">₹ Indian Mode</p>
               </div>
             </div>
-            <Link
-              href="/"
-              title="Sign Out to Landing Page"
+            <button
+              onClick={handleSignOut}
+              title="Sign Out"
               className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
             >
               <LogOut className="w-4 h-4" />
-            </Link>
+            </button>
           </div>
         </div>
       </aside>

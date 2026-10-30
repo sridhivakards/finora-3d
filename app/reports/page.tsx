@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import DashboardSidebar from '@/components/DashboardSidebar';
-import { FinoraStore } from '@/lib/storage';
+import { db, FinancialSummary } from '@/lib/db';
 import { formatINR } from '@/lib/utils';
 import { Transaction } from '@/lib/types';
 import {
@@ -28,50 +28,54 @@ import {
 } from 'recharts';
 
 export default function ReportsPage() {
-  const [summary, setSummary] = useState({
-    totalIncome: 90000,
-    totalExpenses: 18400,
-    currentBalance: 71600,
-    savingsRate: 79.6,
-    categorySpending: {} as Record<string, number>,
+  const [summary, setSummary] = useState<FinancialSummary>({
+    totalIncome: 0,
+    totalExpenses: 0,
+    currentBalance: 0,
+    savingsRate: 0,
+    categorySpending: {},
     transactionCount: 0,
   });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [trendData, setTrendData] = useState<{ month: string; Income: number; Expenses: number; Savings: number }[]>([]);
   const [histogramMode, setHistogramMode] = useState<'cashflow' | 'bins'>('cashflow');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const s = FinoraStore.getFinancialSummary();
-    const t = FinoraStore.getTransactions();
-    setSummary(s);
-    setTransactions(t);
+    (async () => {
+      try {
+        const [txs, trend] = await Promise.all([
+          db.transactions.list(),
+          db.transactions.getMonthlyTrend(),
+        ]);
+        const s = db.computeSummary(txs);
+        setSummary(s);
+        setTransactions(txs);
+        setTrendData(trend.map(t => ({ ...t, Savings: t.Income - t.Expenses })));
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
-  // Multi-month trend mock based on historical data
-  const trendData = [
-    { month: 'Apr', Income: 85000, Expenses: 14200, Savings: 70800 },
-    { month: 'May', Income: 85000, Expenses: 15800, Savings: 69200 },
-    { month: 'Jun', Income: 90000, Expenses: 16400, Savings: 73600 },
-    { month: 'Jul', Income: 90000, Expenses: 17900, Savings: 72100 },
-    { month: 'Aug', Income: 90000, Expenses: 17200, Savings: 72800 },
-    { month: 'Sep', Income: summary.totalIncome, Expenses: summary.totalExpenses, Savings: summary.currentBalance },
-  ];
-
-  // Frequency Binned Histogram Distribution
+  // Frequency Binned Histogram Distribution from real data
+  const expensesOnly = transactions.filter((t) => t.transaction_type === 'expense');
   const expenseBins = [
-    { range: '< ₹500', label: 'Micro Purchases', count: 8, total: 1950, color: '#38bdf8' },
-    { range: '₹500 - ₹1.5k', label: 'Daily Essentials', count: 6, total: 4850, color: '#06b6d4' },
-    { range: '₹1.5k - ₹5k', label: 'Bills & Lifestyle', count: 4, total: 6000, color: '#8b5cf6' },
-    { range: '> ₹5k', label: 'Major Spikes (Zara)', count: 1, total: 5600, color: '#f43f5e' },
+    { range: '< ₹500',       label: 'Micro Purchases',   count: expensesOnly.filter(t => t.amount < 500).length,                      total: expensesOnly.filter(t => t.amount < 500).reduce((s,t) => s+t.amount,0),         color: '#38bdf8' },
+    { range: '₹500 - ₹1.5k', label: 'Daily Essentials',  count: expensesOnly.filter(t => t.amount >= 500 && t.amount < 1500).length,   total: expensesOnly.filter(t => t.amount >= 500 && t.amount < 1500).reduce((s,t) => s+t.amount,0), color: '#06b6d4' },
+    { range: '₹1.5k - ₹5k',  label: 'Bills & Lifestyle', count: expensesOnly.filter(t => t.amount >= 1500 && t.amount < 5000).length,  total: expensesOnly.filter(t => t.amount >= 1500 && t.amount < 5000).reduce((s,t) => s+t.amount,0), color: '#8b5cf6' },
+    { range: '> ₹5k',         label: 'Major Spikes',      count: expensesOnly.filter(t => t.amount >= 5000).length,                     total: expensesOnly.filter(t => t.amount >= 5000).reduce((s,t) => s+t.amount,0),        color: '#f43f5e' },
   ];
 
   // Highest spending category
   const sortedCategories = Object.entries(summary.categorySpending).sort((a, b) => b[1] - a[1]);
-  const highestCat = sortedCategories[0] || ['Food', 6200];
-  const highestCatPct = summary.totalExpenses > 0 ? Math.round((highestCat[1] / summary.totalExpenses) * 100) : 0;
+  const highestCat = sortedCategories[0] || ['—', 0];
+  const highestCatPct = summary.totalExpenses > 0 ? Math.round((Number(highestCat[1]) / summary.totalExpenses) * 100) : 0;
 
   // Largest transaction
-  const expensesOnly = transactions.filter((t) => t.transaction_type === 'expense');
-  const largestTx = expensesOnly.reduce((max, t) => (t.amount > max.amount ? t : max), expensesOnly[0] || { amount: 5600, description: 'Zara Weekend Shopping Spree' });
+  const largestTx = expensesOnly.length > 0
+    ? expensesOnly.reduce((max, t) => (t.amount > max.amount ? t : max), expensesOnly[0])
+    : null;
   const avgExpense = expensesOnly.length > 0 ? Math.round(summary.totalExpenses / expensesOnly.length) : 0;
 
   return (
@@ -149,11 +153,17 @@ export default function ReportsPage() {
             <div>
               <h4 className="text-sm font-bold text-white">Finora Algorithmic Insight</h4>
               <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                &ldquo;<strong>{highestCat[0]}</strong> accounts for{' '}
-                <strong>{highestCatPct}%</strong> of your expenses this month (
-                {formatINR(highestCat[1])}). Your largest single expense was{' '}
-                <strong>{largestTx.description}</strong> ({formatINR(largestTx.amount)}). Average
-                ticket size per transaction is {formatINR(avgExpense)}.&rdquo;
+                {largestTx ? (
+                  <>
+                    &ldquo;<strong>{highestCat[0]}</strong> accounts for{' '}
+                    <strong>{highestCatPct}%</strong> of your expenses this month (
+                    {formatINR(Number(highestCat[1]))}). Your largest single expense was{' '}
+                    <strong>{largestTx.description}</strong> ({formatINR(largestTx.amount)}). Average
+                    ticket size per transaction is {formatINR(avgExpense)}.&rdquo;
+                  </>
+                ) : (
+                  <>No expenses recorded yet. Once you add transactions, Finora will automatically analyze highest categories, ticket sizes, and spending distributions.</>
+                )}
               </p>
             </div>
           </div>

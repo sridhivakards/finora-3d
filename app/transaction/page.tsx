@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import DashboardSidebar from '@/components/DashboardSidebar';
 import AddTransactionModal from '@/components/AddTransactionModal';
-import { FinoraStore } from '@/lib/storage';
+import { db } from '@/lib/db';
 import { formatINR, formatDate } from '@/lib/utils';
 import { Transaction, TransactionCategory, TransactionType } from '@/lib/types';
 import {
@@ -42,15 +42,24 @@ export default function TransactionPage() {
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [deleting, setDeleting] = useState<string | null>(null);
 
-  const loadData = () => {
-    setTransactions(FinoraStore.getTransactions());
+  const loadData = async () => {
+    try {
+      setError('');
+      const txs = await db.transactions.list();
+      setTransactions(txs);
+    } catch (err: any) {
+      setError(err?.message ?? 'Failed to load transactions.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     loadData();
-    window.addEventListener('finora-data-updated', loadData);
-    return () => window.removeEventListener('finora-data-updated', loadData);
   }, []);
 
   // Filtered & sorted transactions
@@ -94,9 +103,17 @@ export default function TransactionPage() {
     return result;
   }, [transactions, searchQuery, selectedType, selectedCategory, sortBy]);
 
-  const handleDelete = (id: string) => {
-    FinoraStore.deleteTransaction(id);
-    setDeleteConfirmId(null);
+  const handleDelete = async (id: string) => {
+    setDeleting(id);
+    try {
+      await db.transactions.delete(id);
+      setDeleteConfirmId(null);
+      await loadData();
+    } catch (err: any) {
+      setError(err?.message ?? 'Failed to delete transaction.');
+    } finally {
+      setDeleting(null);
+    }
   };
 
   const exportCSV = () => {

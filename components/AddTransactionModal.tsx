@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, PlusCircle, ArrowDownRight, ArrowUpRight, Calendar, Tag, FileText, Check } from 'lucide-react';
-import { FinoraStore } from '@/lib/storage';
+import { X, PlusCircle, ArrowDownRight, ArrowUpRight, Calendar, FileText, Check, AlertCircle } from 'lucide-react';
+import { db } from '@/lib/db';
 import { TransactionCategory, TransactionType } from '@/lib/types';
 import confetti from 'canvas-confetti';
 
@@ -13,16 +13,8 @@ interface AddTransactionModalProps {
 }
 
 const CATEGORIES: TransactionCategory[] = [
-  'Food',
-  'Transport',
-  'Shopping',
-  'Entertainment',
-  'Bills',
-  'Health',
-  'Education',
-  'Salary',
-  'Investment',
-  'Other',
+  'Food', 'Transport', 'Shopping', 'Entertainment',
+  'Bills', 'Health', 'Education', 'Salary', 'Investment', 'Other',
 ];
 
 export default function AddTransactionModal({ isOpen, onClose, onSuccess }: AddTransactionModalProps) {
@@ -32,23 +24,49 @@ export default function AddTransactionModal({ isOpen, onClose, onSuccess }: AddT
   const [type, setType] = useState<TransactionType>('expense');
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const resetForm = () => {
+    setDescription('');
+    setAmount('');
+    setType('expense');
+    setCategory('Food');
+    setDate(new Date().toISOString().split('T')[0]);
+    setErrorMsg('');
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg('');
+
     const numAmount = parseFloat(amount);
-    if (!description.trim() || isNaN(numAmount) || numAmount <= 0) return;
+    if (!description.trim()) {
+      setErrorMsg('Please enter a description.');
+      return;
+    }
+    if (isNaN(numAmount) || numAmount <= 0) {
+      setErrorMsg('Please enter a valid amount greater than zero.');
+      return;
+    }
 
     setIsSubmitting(true);
 
     try {
-      FinoraStore.addTransaction({
+      await db.transactions.add({
         description: description.trim(),
         amount: numAmount,
         category,
         transaction_type: type,
         transaction_date: date,
+        is_unusual: false,
+        anomaly_reason: undefined,
       });
 
       if (type === 'income') {
@@ -60,21 +78,18 @@ export default function AddTransactionModal({ isOpen, onClose, onSuccess }: AddT
         });
       }
 
-      // Reset form
-      setDescription('');
-      setAmount('');
-      setType('expense');
-      setCategory('Food');
-
+      resetForm();
       if (onSuccess) onSuccess();
       onClose();
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Failed to save transaction. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
       <div className="relative w-full max-w-md bg-[#0c1222] border border-slate-700/80 rounded-2xl p-6 shadow-2xl text-slate-100">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-800">
@@ -88,12 +103,20 @@ export default function AddTransactionModal({ isOpen, onClose, onSuccess }: AddT
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Error */}
+        {errorMsg && (
+          <div className="mt-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start gap-2">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
@@ -101,10 +124,7 @@ export default function AddTransactionModal({ isOpen, onClose, onSuccess }: AddT
           <div className="grid grid-cols-2 gap-2 p-1 bg-slate-900/90 rounded-xl border border-slate-800">
             <button
               type="button"
-              onClick={() => {
-                setType('expense');
-                if (category === 'Salary') setCategory('Food');
-              }}
+              onClick={() => { setType('expense'); if (category === 'Salary') setCategory('Food'); }}
               className={`flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-lg transition-all ${
                 type === 'expense'
                   ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 shadow-sm'
@@ -116,10 +136,7 @@ export default function AddTransactionModal({ isOpen, onClose, onSuccess }: AddT
             </button>
             <button
               type="button"
-              onClick={() => {
-                setType('income');
-                setCategory('Salary');
-              }}
+              onClick={() => { setType('income'); setCategory('Salary'); }}
               className={`flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-lg transition-all ${
                 type === 'income'
                   ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-sm'
@@ -131,20 +148,17 @@ export default function AddTransactionModal({ isOpen, onClose, onSuccess }: AddT
             </button>
           </div>
 
-          {/* Amount (₹) */}
+          {/* Amount */}
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1">
-              Amount (₹ INR)
-            </label>
+            <label className="block text-xs font-medium text-slate-400 mb-1">Amount (₹ INR)</label>
             <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-lg font-bold text-slate-400">
-                ₹
-              </span>
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-lg font-bold text-slate-400">₹</span>
               <input
                 type="number"
                 step="any"
+                min="0.01"
                 required
-                placeholder="450"
+                placeholder="0.00"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 className="w-full pl-9 pr-4 py-2.5 bg-slate-900/80 border border-slate-700/80 rounded-xl text-lg font-semibold text-white focus:outline-none focus:border-cyan-500 transition-colors"
@@ -154,15 +168,14 @@ export default function AddTransactionModal({ isOpen, onClose, onSuccess }: AddT
 
           {/* Description */}
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1">
-              Description
-            </label>
+            <label className="block text-xs font-medium text-slate-400 mb-1">Description</label>
             <div className="relative">
               <FileText className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <input
                 type="text"
                 required
-                placeholder="e.g. Swiggy Gourmet, Uber to Office, Tech Salary"
+                maxLength={120}
+                placeholder="e.g. Swiggy Gourmet, Uber to Office, Monthly Salary"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-slate-900/80 border border-slate-700/80 rounded-xl text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
@@ -173,9 +186,7 @@ export default function AddTransactionModal({ isOpen, onClose, onSuccess }: AddT
           {/* Category & Date */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">
-                Category
-              </label>
+              <label className="block text-xs font-medium text-slate-400 mb-1">Category</label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as TransactionCategory)}
@@ -189,9 +200,7 @@ export default function AddTransactionModal({ isOpen, onClose, onSuccess }: AddT
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">
-                Date
-              </label>
+              <label className="block text-xs font-medium text-slate-400 mb-1">Date</label>
               <input
                 type="date"
                 required
@@ -207,10 +216,19 @@ export default function AddTransactionModal({ isOpen, onClose, onSuccess }: AddT
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-600 to-violet-600 text-white font-semibold text-sm shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/35 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-600 to-violet-600 text-white font-semibold text-sm shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/35 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
-              <Check className="w-4 h-4" />
-              <span>Record Transaction</span>
+              {isSubmitting ? (
+                <>
+                  <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  <span>Saving to Supabase...</span>
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  <span>Record Transaction</span>
+                </>
+              )}
             </button>
           </div>
         </form>

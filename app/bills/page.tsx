@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import DashboardSidebar from '@/components/DashboardSidebar';
-import { FinoraStore } from '@/lib/storage';
+import { db } from '@/lib/db';
 import { formatINR, formatDate } from '@/lib/utils';
 import { Bill } from '@/lib/types';
 import {
@@ -28,43 +28,68 @@ export default function BillsPage() {
   const [category, setCategory] = useState('Utilities');
   const [frequency, setFrequency] = useState<'Monthly' | 'Quarterly' | 'Yearly'>('Monthly');
 
-  const loadData = () => {
-    setBills(FinoraStore.getBills());
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const loadData = async () => {
+    try {
+      setErrorMsg('');
+      const data = await db.bills.list();
+      setBills(data);
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Failed to load bills.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     loadData();
-    window.addEventListener('finora-data-updated', loadData);
-    return () => window.removeEventListener('finora-data-updated', loadData);
   }, []);
 
-  const handleToggle = (id: string) => {
-    FinoraStore.toggleBillStatus(id);
-    loadData();
+  const handleToggle = async (id: string, currentStatus: Bill['status']) => {
+    try {
+      await db.bills.toggleStatus(id, currentStatus);
+      await loadData();
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Failed to update bill status.');
+    }
   };
 
-  const handleCreateBill = (e: React.FormEvent) => {
+  const handleDelete = async (id: string) => {
+    try {
+      await db.bills.delete(id);
+      await loadData();
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Failed to delete bill.');
+    }
+  };
+
+  const handleCreateBill = async (e: React.FormEvent) => {
     e.preventDefault();
     const numAmount = parseFloat(amount);
     if (!title.trim() || isNaN(numAmount) || numAmount <= 0 || !dueDate) return;
-
-    const list = FinoraStore.getBills();
-    const newBill: Bill = {
-      id: 'bl-' + Date.now(),
-      title: title.trim(),
-      amount: numAmount,
-      due_date: dueDate,
-      status: 'Upcoming',
-      recurring_frequency: frequency,
-      category,
-    };
-
-    FinoraStore.saveBills([...list, newBill]);
-    setTitle('');
-    setAmount('');
-    setDueDate('');
-    setModalOpen(false);
-    loadData();
+    setSubmitting(true);
+    try {
+      await db.bills.add({
+        title: title.trim(),
+        amount: numAmount,
+        due_date: dueDate,
+        status: 'Upcoming',
+        recurring_frequency: frequency,
+        category,
+      });
+      setTitle('');
+      setAmount('');
+      setDueDate('');
+      setModalOpen(false);
+      await loadData();
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Failed to create bill.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const getDaysLeft = (dueDateStr: string) => {
@@ -200,7 +225,7 @@ export default function BillsPage() {
                     </div>
 
                     <button
-                      onClick={() => handleToggle(bill.id)}
+                      onClick={() => handleToggle(bill.id, bill.status)}
                       className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
                         isPaid
                           ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30'
@@ -209,6 +234,13 @@ export default function BillsPage() {
                     >
                       <CheckCircle2 className="w-4 h-4" />
                       <span>{isPaid ? 'Paid' : 'Mark as Paid'}</span>
+                    </button>
+                    <button
+                      onClick={() => handleDelete(bill.id)}
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                      title="Delete Bill"
+                    >
+                      <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>

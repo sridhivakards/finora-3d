@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Lock, Mail, AlertCircle } from 'lucide-react';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/client';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,8 +19,8 @@ export default function LoginPage() {
     setLoading(true);
     setErrorMsg('');
 
-    // Guard: Supabase must be configured — no silent fallthrough to dashboard
-    if (!isSupabaseConfigured || !supabase) {
+    const supabase = createClient();
+    if (!supabase) {
       setErrorMsg(
         'Authentication is not configured. Please contact the administrator — the Supabase environment variables are missing from this deployment.'
       );
@@ -50,6 +50,7 @@ export default function LoginPage() {
 
       // Authenticated — navigate to dashboard
       router.push('/dashboard');
+      router.refresh();
     } catch (err: any) {
       // Network or unexpected exception — surface it, never swallow it
       setErrorMsg(
@@ -57,13 +58,6 @@ export default function LoginPage() {
       );
       setLoading(false);
     }
-  };
-
-  const handleQuickDemo = () => {
-    setLoading(true);
-    setTimeout(() => {
-      router.push('/dashboard');
-    }, 300);
   };
 
   return (
@@ -83,33 +77,8 @@ export default function LoginPage() {
           </Link>
           <h2 className="text-xl font-bold text-white">Welcome back</h2>
           <p className="text-xs text-slate-400 mt-1">
-            Access your AI personal finance operating system
+            Sign in to access your personal financial intelligence workspace
           </p>
-        </div>
-
-        {/* Quick Instant Demo Access Button */}
-        <div className="mb-6 p-4 rounded-2xl bg-cyan-950/30 border border-cyan-500/30 text-center">
-          <span className="text-[11px] text-cyan-300 font-semibold block mb-2">
-            🚀 Client &amp; Reviewer Instant Access
-          </span>
-          <button
-            type="button"
-            onClick={handleQuickDemo}
-            disabled={loading}
-            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-semibold text-xs shadow-md shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            <span>Launch Instant Demo Workspace</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        <div className="relative my-6 text-center">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-800" />
-          </div>
-          <span className="relative px-3 bg-[#0c1222] text-[11px] text-slate-500 uppercase tracking-widest font-mono">
-            Or sign in with credentials
-          </span>
         </div>
 
         {/* Error message */}

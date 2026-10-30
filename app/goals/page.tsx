@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import DashboardSidebar from '@/components/DashboardSidebar';
-import { FinoraStore } from '@/lib/storage';
+import { db } from '@/lib/db';
 import { formatINR, formatDate } from '@/lib/utils';
 import { FinancialGoal } from '@/lib/types';
 import {
@@ -166,69 +166,75 @@ export default function GoalsPage() {
   const [targetDate, setTargetDate] = useState('2026-12-31');
   const [category, setCategory] = useState('Savings');
 
-  const loadData = () => {
-    setGoals(FinoraStore.getGoals());
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const loadData = async () => {
+    try {
+      setErrorMsg('');
+      const data = await db.goals.list();
+      setGoals(data);
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Failed to load goals.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     loadData();
-    window.addEventListener('finora-data-updated', loadData);
-    return () => window.removeEventListener('finora-data-updated', loadData);
   }, []);
 
-  const handleCreateGoal = (e: React.FormEvent) => {
+  const handleCreateGoal = async (e: React.FormEvent) => {
     e.preventDefault();
     const target = parseFloat(targetAmount);
     const initial = parseFloat(currentAmount) || 0;
     if (!name.trim() || isNaN(target) || target <= 0) return;
 
-    FinoraStore.addGoal({
-      name: name.trim(),
-      target_amount: target,
-      current_amount: initial,
-      target_date: targetDate,
-      category,
-    });
-
-    confetti({
-      particleCount: 50,
-      spread: 60,
-      origin: { y: 0.6 },
-      colors: ['#06b6d4', '#8b5cf6', '#10b981'],
-    });
-
-    setName('');
-    setTargetAmount('');
-    setCurrentAmount('');
-    setModalOpen(false);
-    loadData();
+    try {
+      await db.goals.add({
+        name: name.trim(),
+        target_amount: target,
+        current_amount: initial,
+        target_date: targetDate,
+        category,
+      });
+      confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 }, colors: ['#06b6d4', '#8b5cf6', '#10b981'] });
+      setName('');
+      setTargetAmount('');
+      setCurrentAmount('');
+      setModalOpen(false);
+      await loadData();
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Failed to create goal.');
+    }
   };
 
-  const handleContribute = (e: React.FormEvent) => {
+  const handleContribute = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contribGoal) return;
     const amt = parseFloat(contribAmount);
     if (isNaN(amt) || amt <= 0) return;
 
-    FinoraStore.contributeToGoal(contribGoal.id, amt);
-
-    // High energy confetti burst
-    confetti({
-      particleCount: 80,
-      spread: 80,
-      origin: { y: 0.6 },
-      colors: ['#06b6d4', '#6366f1', '#10b981', '#fbbf24'],
-    });
-
-    setContribAmount('');
-    setContribGoal(null);
-    loadData();
+    try {
+      await db.goals.contribute(contribGoal.id, amt);
+      confetti({ particleCount: 80, spread: 80, origin: { y: 0.6 }, colors: ['#06b6d4', '#6366f1', '#10b981', '#fbbf24'] });
+      setContribAmount('');
+      setContribGoal(null);
+      await loadData();
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Failed to contribute.');
+    }
   };
 
-  const handleDeleteGoal = (id: string, e: React.MouseEvent) => {
+  const handleDeleteGoal = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    FinoraStore.deleteGoal(id);
-    loadData();
+    try {
+      await db.goals.delete(id);
+      await loadData();
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Failed to delete goal.');
+    }
   };
 
   const totalTarget = goals.reduce((s, g) => s + g.target_amount, 0);

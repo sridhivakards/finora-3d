@@ -43,3 +43,7 @@ env/
 venv/
 .venv/
 ENV/
+
+# backups & zip
+zip files/
+*.zip

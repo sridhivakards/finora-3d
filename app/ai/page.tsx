@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import DashboardSidebar from '@/components/DashboardSidebar';
-import { FinoraStore } from '@/lib/storage';
+import { db } from '@/lib/db';
 import { formatINR } from '@/lib/utils';
 import {
   Sparkles,
@@ -57,16 +57,8 @@ const CATEGORIZED_PROMPTS: { category: PromptCategory; prompt: string; icon: str
 ];
 
 export default function AIPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'init-1',
-      sender: 'finora',
-      text: "Hello Dhilikesh! I am Finora AI, your personal financial copilot.\n\nI have securely audited your live September 2026 ledger (Income: ₹90,000, Expenses: ₹18,400, Retained Savings: ₹71,600). Ask me anything about where your money went, your ML predictions, or how to calibrate your budget allocations.",
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      source: 'Finora Grounded Engine v2.4',
-    },
-  ]);
-
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [stats, setStats] = useState({ txCount: 0, budgetCount: 0, isAiConfigured: false });
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<PromptCategory>('All');
@@ -78,6 +70,44 @@ export default function AIPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [profile, txs, budgets] = await Promise.all([
+          db.userProfile.get().catch(() => null),
+          db.transactions.list().catch(() => []),
+          db.budgets.list().catch(() => []),
+        ]);
+
+        const summary = db.computeSummary(txs);
+        const userName = profile?.full_name || profile?.email?.split('@')[0] || 'there';
+
+        setStats({
+          txCount: txs.length,
+          budgetCount: budgets.length,
+          isAiConfigured: false,
+        });
+
+        const welcomeText =
+          txs.length === 0
+            ? `Hello ${userName}! I am Finora AI, your personal financial copilot.\n\nYour ledger is currently clean with 0 recorded transactions. Once you record your first income or expense, I can provide grounded spending audits, ML predictions, and budget calibration.`
+            : `Hello ${userName}! I am Finora AI, your personal financial copilot.\n\nI have securely audited your live database records (Income: ${formatINR(summary.totalIncome)}, Expenses: ${formatINR(summary.totalExpenses)}, Retained Savings: ${formatINR(summary.currentBalance)}, Savings Rate: ${summary.savingsRate}%). Ask me anything about where your money went, your ML predictions, or how to calibrate your budget allocations.`;
+
+        setMessages([
+          {
+            id: 'init-1',
+            sender: 'finora',
+            text: welcomeText,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            source: 'Finora Grounded Intelligence',
+          },
+        ]);
+      } catch (e) {
+        console.error('Failed to initialize AI page context:', e);
+      }
+    })();
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -193,16 +223,20 @@ export default function AIPage() {
     setLoading(true);
 
     try {
-      const summary = FinoraStore.getFinancialSummary();
-      const txs = FinoraStore.getTransactions();
-      const budgets = FinoraStore.getBudgets();
+      const [txs, budgets] = await Promise.all([
+        db.transactions.list(),
+        db.budgets.list(),
+      ]);
+
+      const summary = db.computeSummary(txs);
+      const nextMonthPred = Math.round(summary.totalExpenses * 1.05);
 
       const context = {
         totalIncome: summary.totalIncome,
         totalExpenses: summary.totalExpenses,
         currentBalance: summary.currentBalance,
         savingsRate: summary.savingsRate,
-        nextMonthPrediction: summary.nextMonthPrediction,
+        nextMonthPrediction: nextMonthPred,
         categorySpending: summary.categorySpending,
         unusualTransactions: txs
           .filter((t) => t.is_unusual)
@@ -227,21 +261,22 @@ export default function AIPage() {
           sender: 'finora',
           text: data.answer || "I have analyzed your ledger. Everything looks steady!",
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          source: data.source === 'openai-grounded' ? 'GPT-4o Grounded' : 'Finora Hybrid Core v2.4',
+          source: data.source || 'Finora Grounded Intelligence',
         };
         setMessages((prev) => [...prev, finoraMsg]);
       } else {
-        throw new Error('Failed to get AI response');
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData?.error || 'Failed to get AI response');
       }
-    } catch {
-      const fallbackMsg: ChatMessage = {
-        id: 'msg-' + Date.now() + '-fallback',
+    } catch (err: any) {
+      const errorMsg: ChatMessage = {
+        id: 'msg-' + Date.now() + '-error',
         sender: 'finora',
-        text: "I analyzed your latest records. You have spent ₹18,400 out of ₹90,000 income, retaining ₹71,600 (79.6% savings rate). Food remains your primary expense at ₹6,200. Let me know if you would like optimization strategies.",
+        text: `⚠️ Unable to complete request: ${err?.message || 'Connection to assistant service failed'}. Please verify your network and backend configuration.`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        source: 'Finora Hybrid Core (Offline)',
+        source: 'Finora System Warning',
       };
-      setMessages((prev) => [...prev, fallbackMsg]);
+      setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setLoading(false);
     }
@@ -286,9 +321,9 @@ export default function AIPage() {
 
               <div className="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
                 <span>Active Ledger:</span>
-                <span className="text-emerald-400 font-semibold font-mono">10 Transactions</span>
+                <span className="text-emerald-400 font-semibold font-mono">{stats.txCount} Transactions</span>
                 <span className="text-slate-600">•</span>
-                <span className="text-indigo-300 font-mono">5 Budget Caps</span>
+                <span className="text-indigo-300 font-mono">{stats.budgetCount} Budget Caps</span>
               </div>
             </div>
           </div>

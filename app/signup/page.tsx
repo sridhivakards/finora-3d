@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Lock, Mail, User, CheckCircle, AlertCircle } from 'lucide-react';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/client';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -21,8 +21,8 @@ export default function SignupPage() {
     setErrorMsg('');
     setSuccessMsg('');
 
-    // Guard: Supabase must be configured for real auth
-    if (!isSupabaseConfigured || !supabase) {
+    const supabase = createClient();
+    if (!supabase) {
       setErrorMsg(
         'Authentication is not configured. Please contact the site administrator to set up Supabase environment variables.'
       );
@@ -43,7 +43,6 @@ export default function SignupPage() {
         password,
         options: {
           data: { full_name: name.trim() },
-          // emailRedirectTo ensures the confirmation link sends the user back to the app
           emailRedirectTo: `${window.location.origin}/dashboard`,
         },
       });

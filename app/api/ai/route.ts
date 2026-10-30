@@ -23,8 +23,10 @@ export async function POST(req: NextRequest) {
 
     // Check if OPENAI_API_KEY is configured
     const apiKey = process.env.OPENAI_API_KEY;
+    const isKeyConfigured = Boolean(apiKey && !apiKey.includes('placeholder'));
+    let openAiError: string | null = null;
 
-    if (apiKey && !apiKey.includes('placeholder')) {
+    if (isKeyConfigured) {
       // Call OpenAI with grounded factual context
       const prompt = `You are Finora AI, a personal financial intelligence assistant designed for Indian users.
 Rule 1: NEVER invent or hallucinate financial numbers. ONLY use the actual financial data provided below.
@@ -62,13 +64,18 @@ User Question: "${question}"`;
 
         if (response.ok) {
           const data = await response.json();
-          const answer = data.choices[0]?.message?.content;
+          const answer = data.choices?.[0]?.message?.content;
           if (answer) {
-            return NextResponse.json({ answer, source: 'openai-grounded' });
+            return NextResponse.json({ answer, source: 'OpenAI GPT-4o-mini', isAiConfigured: true });
           }
+        } else {
+          const errBody = await response.text();
+          openAiError = `OpenAI API returned status ${response.status}: ${errBody}`;
+          console.warn(openAiError);
         }
-      } catch (e) {
-        console.warn('OpenAI API call failed, falling back to Finora Hybrid Rule Engine', e);
+      } catch (e: any) {
+        openAiError = e?.message || 'Network error contacting OpenAI';
+        console.warn('OpenAI API call failed:', openAiError);
       }
     }
 
@@ -124,7 +131,21 @@ User Question: "${question}"`;
       answer = `Here is your high-level financial summary:\n\n• **Income:** ₹${context.totalIncome.toLocaleString('en-IN')}\n• **Expenses:** ₹${context.totalExpenses.toLocaleString('en-IN')}\n• **Net Balance:** ₹${context.currentBalance.toLocaleString('en-IN')}\n• **Savings Rate:** ${context.savingsRate}%\n• **Top Category:** ${topCat ? `${topCat[0]} (₹${topCat[1].toLocaleString('en-IN')})` : 'N/A'}\n• **Estimated Next Month:** ₹${context.nextMonthPrediction.toLocaleString('en-IN')}\n\nYou are in a solid financial position. Ask me anything specific about your budgets, upcoming bills, or goal timelines!`;
     }
 
-    return NextResponse.json({ answer, source: 'finora-hybrid-intelligence' });
+    if (isKeyConfigured && openAiError) {
+      return NextResponse.json({
+        answer: `${answer}\n\n*(Note: OpenAI API request encountered an error, so this response was computed via Finora's deterministic rule engine from your verified database records.)*`,
+        source: 'Finora Rule Engine (OpenAI Fallback)',
+        isAiConfigured: true,
+        apiError: openAiError,
+      });
+    }
+
+    return NextResponse.json({
+      answer,
+      source: 'Finora Rule Engine',
+      isAiConfigured: false,
+      notice: 'OPENAI_API_KEY is not configured. Responses are computed using the deterministic financial rule engine from your actual database records.',
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Error processing request' }, { status: 500 });
   }

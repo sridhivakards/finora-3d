@@ -5,7 +5,7 @@ import Link from 'next/link';
 import DashboardSidebar from '@/components/DashboardSidebar';
 import MoneyUniverseScene, { UniverseNodeData } from '@/components/3d/MoneyUniverseScene';
 import GlitterWarp from '@/components/ui/GlitterWarp';
-import { FinoraStore } from '@/lib/storage';
+import { db } from '@/lib/db';
 import { formatINR } from '@/lib/utils';
 import {
   Orbit,
@@ -22,43 +22,49 @@ import {
 export default function UniversePage() {
   const [selectedNode, setSelectedNode] = useState<UniverseNodeData | null>(null);
   const [summary, setSummary] = useState({
-    income: 90000,
-    expenses: 18400,
-    balance: 71600,
-    investments: 332300,
-    bills: 4849,
-    goals: 87000,
+    income: 0,
+    expenses: 0,
+    balance: 0,
+    investments: 0,
+    bills: 0,
+    goals: 0,
   });
-  const [score, setScore] = useState(78);
+  const [score, setScore] = useState(0);
   const [isClient, setIsClient] = useState(false);
 
-  const refreshData = () => {
-    const s = FinoraStore.getFinancialSummary();
-    const h = FinoraStore.getFinancialHealth();
-    const invs = FinoraStore.getInvestments();
-    const bls = FinoraStore.getBills();
-    const gls = FinoraStore.getGoals();
+  const refreshData = async () => {
+    try {
+      const [txs, invs, bls, gls] = await Promise.all([
+        db.transactions.list(),
+        db.investments.list(),
+        db.bills.list(),
+        db.goals.list(),
+      ]);
+      const s = db.computeSummary(txs);
+      const totalInv = invs.reduce((sum, i) => sum + i.current_value, 0);
+      const totalBills = bls.reduce((sum, b) => sum + b.amount, 0);
+      const totalGoals = gls.reduce((sum, g) => sum + g.current_amount, 0);
 
-    const totalInv = invs.reduce((sum, i) => sum + i.current_value, 0);
-    const totalBills = bls.reduce((sum, b) => sum + b.amount, 0);
-    const totalGoals = gls.reduce((sum, g) => sum + g.current_amount, 0);
+      setSummary({
+        income: s.totalIncome,
+        expenses: s.totalExpenses,
+        balance: s.currentBalance,
+        investments: totalInv,
+        bills: totalBills,
+        goals: totalGoals,
+      });
 
-    setSummary({
-      income: s.totalIncome || 90000,
-      expenses: s.totalExpenses || 18400,
-      balance: s.currentBalance || 71600,
-      investments: totalInv > 0 ? totalInv : 332300,
-      bills: totalBills > 0 ? totalBills : 4849,
-      goals: totalGoals > 0 ? totalGoals : 87000,
-    });
-    setScore(h.score || 78);
+      // Compute health score from real savings rate
+      const sc = Math.min(99, Math.max(15,
+        50 + (s.savingsRate >= 50 ? 25 : s.savingsRate >= 25 ? 18 : s.savingsRate > 0 ? 8 : -15)
+      ));
+      setScore(txs.length > 0 ? sc : 0);
+    } catch { /* show zeros on error */ }
   };
 
   useEffect(() => {
     setIsClient(true);
     refreshData();
-    window.addEventListener('finora-data-updated', refreshData);
-    return () => window.removeEventListener('finora-data-updated', refreshData);
   }, []);
 
   return (
