@@ -11,6 +11,7 @@ import {
   Filter,
   ArrowUpDown,
   Plus,
+  Pencil,
   Trash2,
   AlertTriangle,
   ArrowUpRight,
@@ -41,6 +42,7 @@ export default function TransactionPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -379,13 +381,25 @@ export default function TransactionPage() {
                               </button>
                             </div>
                           ) : (
-                            <button
-                              onClick={() => setDeleteConfirmId(tx.id)}
-                              className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
-                              title="Delete Transaction"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <div className="inline-flex items-center gap-1.5 justify-end">
+                              <button
+                                onClick={() => {
+                                  setEditingTx(tx);
+                                  setModalOpen(true);
+                                }}
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+                                title="Edit Transaction"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => setDeleteConfirmId(tx.id)}
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                                title="Delete Transaction"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           )}
                         </td>
                       </tr>
@@ -400,7 +414,11 @@ export default function TransactionPage() {
 
       <AddTransactionModal
         isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+        transactionToEdit={editingTx}
+        onClose={() => {
+          setModalOpen(false);
+          setEditingTx(null);
+        }}
         onSuccess={loadData}
       />
     </div>

@@ -1,15 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, PlusCircle, ArrowDownRight, ArrowUpRight, Calendar, FileText, Check, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, PlusCircle, Pencil, ArrowDownRight, ArrowUpRight, Calendar, FileText, Check, AlertCircle } from 'lucide-react';
 import { db } from '@/lib/db';
-import { TransactionCategory, TransactionType } from '@/lib/types';
+import { Transaction, TransactionCategory, TransactionType } from '@/lib/types';
 import confetti from 'canvas-confetti';
 
 interface AddTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  transactionToEdit?: Transaction | null;
 }
 
 const CATEGORIES: TransactionCategory[] = [
@@ -17,7 +18,7 @@ const CATEGORIES: TransactionCategory[] = [
   'Bills', 'Health', 'Education', 'Salary', 'Investment', 'Other',
 ];
 
-export default function AddTransactionModal({ isOpen, onClose, onSuccess }: AddTransactionModalProps) {
+export default function AddTransactionModal({ isOpen, onClose, onSuccess, transactionToEdit }: AddTransactionModalProps) {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState<TransactionCategory>('Food');
@@ -25,6 +26,21 @@ export default function AddTransactionModal({ isOpen, onClose, onSuccess }: AddT
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  const isEditing = Boolean(transactionToEdit);
+
+  useEffect(() => {
+    if (transactionToEdit) {
+      setDescription(transactionToEdit.description);
+      setAmount(String(transactionToEdit.amount));
+      setCategory(transactionToEdit.category);
+      setType(transactionToEdit.transaction_type);
+      setDate(transactionToEdit.transaction_date);
+      setErrorMsg('');
+    } else {
+      resetForm();
+    }
+  }, [transactionToEdit, isOpen]);
 
   if (!isOpen) return null;
 
@@ -59,23 +75,33 @@ export default function AddTransactionModal({ isOpen, onClose, onSuccess }: AddT
     setIsSubmitting(true);
 
     try {
-      await db.transactions.add({
-        description: description.trim(),
-        amount: numAmount,
-        category,
-        transaction_type: type,
-        transaction_date: date,
-        is_unusual: false,
-        anomaly_reason: undefined,
-      });
-
-      if (type === 'income') {
-        confetti({
-          particleCount: 50,
-          spread: 60,
-          origin: { y: 0.8 },
-          colors: ['#10b981', '#06b6d4', '#6366f1'],
+      if (transactionToEdit) {
+        await db.transactions.update(transactionToEdit.id, {
+          description: description.trim(),
+          amount: numAmount,
+          category,
+          transaction_type: type,
+          transaction_date: date,
         });
+      } else {
+        await db.transactions.add({
+          description: description.trim(),
+          amount: numAmount,
+          category,
+          transaction_type: type,
+          transaction_date: date,
+          is_unusual: false,
+          anomaly_reason: undefined,
+        });
+
+        if (type === 'income') {
+          confetti({
+            particleCount: 50,
+            spread: 60,
+            origin: { y: 0.8 },
+            colors: ['#10b981', '#06b6d4', '#6366f1'],
+          });
+        }
       }
 
       resetForm();
@@ -95,11 +121,13 @@ export default function AddTransactionModal({ isOpen, onClose, onSuccess }: AddT
         <div className="flex items-center justify-between pb-4 border-b border-slate-800">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-              <PlusCircle className="w-5 h-5" />
+              {isEditing ? <Pencil className="w-5 h-5" /> : <PlusCircle className="w-5 h-5" />}
             </div>
             <div>
-              <h2 className="text-lg font-bold">Add Transaction</h2>
-              <p className="text-xs text-slate-400">Record a new income or expenditure</p>
+              <h2 className="text-lg font-bold">{isEditing ? 'Edit Transaction' : 'Add Transaction'}</h2>
+              <p className="text-xs text-slate-400">
+                {isEditing ? 'Update transaction details' : 'Record a new income or expenditure'}
+              </p>
             </div>
           </div>
           <button
@@ -221,12 +249,12 @@ export default function AddTransactionModal({ isOpen, onClose, onSuccess }: AddT
               {isSubmitting ? (
                 <>
                   <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                  <span>Saving to Supabase...</span>
+                  <span>{isEditing ? 'Updating in Supabase...' : 'Saving to Supabase...'}</span>
                 </>
               ) : (
                 <>
                   <Check className="w-4 h-4" />
-                  <span>Record Transaction</span>
+                  <span>{isEditing ? 'Update Transaction' : 'Record Transaction'}</span>
                 </>
               )}
             </button>
