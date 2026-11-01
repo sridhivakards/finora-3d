@@ -29,6 +29,16 @@ export default function AddTransactionModal({ isOpen, onClose, onSuccess, transa
 
   const isEditing = Boolean(transactionToEdit);
 
+  // resetForm must be defined BEFORE the useEffect that calls it
+  const resetForm = () => {
+    setDescription('');
+    setAmount('');
+    setType('expense');
+    setCategory('Food');
+    setDate(new Date().toISOString().split('T')[0]);
+    setErrorMsg('');
+  };
+
   useEffect(() => {
     if (transactionToEdit) {
       setDescription(transactionToEdit.description);
@@ -40,18 +50,10 @@ export default function AddTransactionModal({ isOpen, onClose, onSuccess, transa
     } else {
       resetForm();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transactionToEdit, isOpen]);
 
   if (!isOpen) return null;
-
-  const resetForm = () => {
-    setDescription('');
-    setAmount('');
-    setType('expense');
-    setCategory('Food');
-    setDate(new Date().toISOString().split('T')[0]);
-    setErrorMsg('');
-  };
 
   const handleClose = () => {
     resetForm();

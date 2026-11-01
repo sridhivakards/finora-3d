@@ -28,15 +28,26 @@ export default function LoginPage() {
       return;
     }
 
+    const cleanEmail = email.trim().toLowerCase();
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: cleanEmail,
         password,
       });
 
       if (error) {
-        // Show the real Supabase error (e.g. "Invalid login credentials", "Email not confirmed")
-        setErrorMsg(error.message);
+        if (error.message.toLowerCase().includes('invalid login credentials')) {
+          setErrorMsg(
+            'Invalid email or password. If you recently created your account, please check your email inbox to confirm your email, or verify your credentials. If you haven\'t signed up yet, please create an account first.'
+          );
+        } else if (error.message.toLowerCase().includes('email not confirmed')) {
+          setErrorMsg(
+            'Please check your email inbox and click the confirmation link before logging in, or disable "Confirm email" in your Supabase Authentication settings.'
+          );
+        } else {
+          setErrorMsg(error.message);
+        }
         setLoading(false);
         return;
       }
@@ -97,6 +108,9 @@ export default function LoginPage() {
               <input
                 type="email"
                 required
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck="false"
                 placeholder="name@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

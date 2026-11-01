@@ -14,8 +14,8 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
     full_name TEXT,
     currency TEXT DEFAULT 'INR',
     currency_symbol TEXT DEFAULT '₹',
-    monthly_income NUMERIC(12, 2) DEFAULT 90000.00,
-    financial_health_score INTEGER DEFAULT 78,
+    monthly_income NUMERIC(12, 2) DEFAULT 0.00,
+    financial_health_score INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -105,6 +105,9 @@ CREATE POLICY "Users can view own profile" ON public.user_profiles FOR SELECT US
 DROP POLICY IF EXISTS "Users can update own profile" ON public.user_profiles;
 CREATE POLICY "Users can update own profile" ON public.user_profiles FOR UPDATE USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can insert own profile" ON public.user_profiles;
+CREATE POLICY "Users can insert own profile" ON public.user_profiles FOR INSERT WITH CHECK (auth.uid() = id);
+
 -- Transactions Policies
 DROP POLICY IF EXISTS "Users can SELECT own transactions" ON public.transactions;
 CREATE POLICY "Users can SELECT own transactions" ON public.transactions FOR SELECT USING (auth.uid() = user_id);
@@ -169,3 +172,34 @@ CREATE POLICY "Users can UPDATE own investments" ON public.investments FOR UPDAT
 
 DROP POLICY IF EXISTS "Users can DELETE own investments" ON public.investments;
 CREATE POLICY "Users can DELETE own investments" ON public.investments FOR DELETE USING (auth.uid() = user_id);
+
+-- ============================================================
+-- AUTO-CREATE PROFILE ON SIGNUP (TRIGGER)
+-- This runs inside the database automatically whenever a new
+-- user is created via Supabase Auth → no extra client code needed
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.user_profiles (id, email, full_name)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', '')
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$;
+
+-- Drop trigger if it exists (idempotent)
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+
+-- Create the trigger
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
