@@ -3,19 +3,24 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import DashboardSidebar from '@/components/DashboardSidebar';
+import MoneyUniverseScene, { UniverseNodeData } from '@/components/3d/MoneyUniverseScene';
+import GlitterWarp from '@/components/ui/GlitterWarp';
 import { db } from '@/lib/db';
 import { formatINR } from '@/lib/utils';
 import {
-  ArrowLeft,
-  ArrowUpRight,
-  ArrowDownRight,
-  Wallet,
+  Orbit,
+  Sparkles,
+  ShieldCheck,
   TrendingUp,
-  ReceiptText,
-  Target
+  TrendingDown,
+  Layers,
+  ChevronRight,
+  Maximize2,
+  Info
 } from 'lucide-react';
 
 export default function UniversePage() {
+  const [selectedNode, setSelectedNode] = useState<UniverseNodeData | null>(null);
   const [summary, setSummary] = useState({
     income: 0,
     expenses: 0,
@@ -24,118 +29,125 @@ export default function UniversePage() {
     bills: 0,
     goals: 0,
   });
-  const [loading, setLoading] = useState(true);
+  const [score, setScore] = useState(0);
+  const [isClient, setIsClient] = useState(false);
+
+  const refreshData = async () => {
+    try {
+      const [txs, invs, bls, gls] = await Promise.all([
+        db.transactions.list(),
+        db.investments.list(),
+        db.bills.list(),
+        db.goals.list(),
+      ]);
+      const s = db.computeSummary(txs);
+      const totalInv = invs.reduce((sum, i) => sum + i.current_value, 0);
+      const totalBills = bls.reduce((sum, b) => sum + b.amount, 0);
+      const totalGoals = gls.reduce((sum, g) => sum + g.current_amount, 0);
+
+      setSummary({
+        income: s.totalIncome,
+        expenses: s.totalExpenses,
+        balance: s.currentBalance,
+        investments: totalInv,
+        bills: totalBills,
+        goals: totalGoals,
+      });
+
+      // Compute health score from real savings rate
+      const sc = Math.min(99, Math.max(15,
+        50 + (s.savingsRate >= 50 ? 25 : s.savingsRate >= 25 ? 18 : s.savingsRate > 0 ? 8 : -15)
+      ));
+      setScore(txs.length > 0 ? sc : 0);
+    } catch { /* show zeros on error */ }
+  };
 
   useEffect(() => {
-    (async () => {
-      try {
-        const [txs, invs, bls, gls] = await Promise.all([
-          db.transactions.list(),
-          db.investments.list(),
-          db.bills.list(),
-          db.goals.list(),
-        ]);
-        const s = db.computeSummary(txs);
-        const totalInv = invs.reduce((sum, i) => sum + Number(i.current_value), 0);
-        const totalBills = bls.reduce((sum, b) => sum + Number(b.amount), 0);
-        const totalGoals = gls.reduce((sum, g) => sum + Number(g.current_amount), 0);
-
-        setSummary({
-          income: s.totalIncome,
-          expenses: s.totalExpenses,
-          balance: s.currentBalance,
-          investments: totalInv,
-          bills: totalBills,
-          goals: totalGoals,
-        });
-      } finally {
-        setLoading(false);
-      }
-    })();
+    setIsClient(true);
+    refreshData();
   }, []);
 
-  const totalCapitalInPlay = summary.income + summary.investments + summary.goals;
-
-  const nodes = [
-    { label: 'Income Inflow', val: summary.income, icon: ArrowUpRight, color: '#39845B' },
-    { label: 'Expenses Outflow', val: summary.expenses, icon: ArrowDownRight, color: '#DB896B' },
-    { label: 'Net Liquidity', val: summary.balance, icon: Wallet, color: '#244C3B' },
-    { label: 'Invested Assets', val: summary.investments, icon: TrendingUp, color: '#466B56' },
-    { label: 'Recurring Liabilities', val: summary.bills, icon: ReceiptText, color: '#D6A45E' },
-    { label: 'Goals Capital', val: summary.goals, icon: Target, color: '#A6B6A1' },
-  ];
-
   return (
-    <div className="min-h-screen bg-[#F7F6F0] text-[#1D2923]">
+    <div className="min-h-screen bg-[#060913] text-slate-100 flex overflow-hidden">
       <DashboardSidebar />
 
-      <main className="lg:pl-64 pt-14 lg:pt-0 pb-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#E6E5DC]">
-            <div>
-              <h1 className="font-serif text-3xl font-normal text-[#1D2923] tracking-tight">
-                Capital Ecosystem
-              </h1>
-              <p className="text-sm text-[#777E77] mt-1 font-sans">
-                Holistic view of all liquidity, commitments, investments and milestones
-              </p>
+      <main className="flex-1 lg:pl-64 pt-16 lg:pt-0 min-h-screen flex flex-col relative">
+        {/* Header HUD */}
+        <header className="px-6 lg:px-10 py-5 border-b border-slate-800/80 bg-[#080d1e]/80 backdrop-blur-md flex items-center justify-between z-20">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-violet-500/20 text-violet-300 border border-violet-500/30">
+                3D WEBGL ENGINE
+              </span>
+              <span className="text-xs text-slate-400">• Real-Time Money Cosmos</span>
+            </div>
+            <h1 className="text-2xl font-black tracking-tight text-white mt-0.5 flex items-center gap-2">
+              <span>Your Money Universe</span>
+              <Orbit className="w-5 h-5 text-violet-400 animate-spin-slow" />
+            </h1>
+            <p className="text-xs text-slate-400">
+              Interactive spatial model of your income, expenses, savings, bills, and investments
+            </p>
+          </div>
+
+          <div className="hidden sm:flex items-center gap-3">
+            <div className="px-3.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-cyan-400 animate-pulse" />
+              <span className="text-xs text-slate-400">Cosmos Engine:</span>
+              <span className="text-xs font-bold font-mono text-cyan-300">Live 3D</span>
             </div>
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#FFFFFF] hover:bg-[#F0F1E9] border border-[#E6E5DC] text-[#1D2923] text-xs font-medium rounded-lg transition-colors shadow-subtle"
+              className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition-colors"
             >
-              <ArrowLeft className="w-3.5 h-3.5" strokeWidth={1.75} />
-              <span>Back to Dashboard</span>
+              Back to Dashboard
             </Link>
           </div>
+        </header>
 
-          {/* Capital Ecosystem Summary Card */}
-          <div className="bg-[#FFFFFF] border border-[#E6E5DC] rounded-xl p-8 shadow-subtle text-center max-w-2xl mx-auto">
-            <span className="text-xs uppercase tracking-wider text-[#777E77] font-medium">
-              Total Tracked Capital Velocity
-            </span>
-            <p className="text-4xl font-serif text-[#1D2923] mt-2 tabular-nums">
-              {formatINR(totalCapitalInPlay)}
-            </p>
-            <p className="text-xs text-[#777E77] mt-2 max-w-md mx-auto">
-              Synthesized from your active transactions, asset holdings, and defined financial targets.
-            </p>
-          </div>
+        {/* 3D Canvas Viewport */}
+        <div className="flex-1 relative w-full h-[calc(100vh-80px)] bg-gradient-radial from-[#0c1222] via-[#060913] to-[#04060c] overflow-hidden">
+          <GlitterWarp
+            colors={['#06b6d4', '#22d3ee', '#6366f1', '#8b5cf6', '#f59e0b', '#38bdf8']}
+            speed={0.8}
+            particleCount={200}
+            warpFactor={1.1}
+          >
+            {isClient ? (
+              <MoneyUniverseScene
+                score={score}
+                summaryData={summary}
+                onNodeClick={(node) => setSelectedNode(node)}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-cyan-400 font-mono text-xs">
+                INITIALIZING 3D DONUT SPATIAL ENGINE...
+              </div>
+            )}
+          </GlitterWarp>
 
-          {/* Node Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {nodes.map((node) => {
-              const Icon = node.icon;
-              return (
+          {/* Quick HUD Metrics Strip at Bottom */}
+          <div className="absolute bottom-6 left-6 right-6 pointer-events-none hidden md:block">
+            <div className="max-w-4xl mx-auto grid grid-cols-6 gap-2 pointer-events-auto">
+              {[
+                { label: 'Income', val: summary.income, color: 'text-emerald-400', border: 'border-emerald-500/30' },
+                { label: 'Expenses', val: summary.expenses, color: 'text-rose-400', border: 'border-rose-500/30' },
+                { label: 'Savings', val: summary.balance, color: 'text-cyan-400', border: 'border-cyan-500/30' },
+                { label: 'Investments', val: summary.investments, color: 'text-violet-400', border: 'border-violet-500/30' },
+                { label: 'Bills', val: summary.bills, color: 'text-amber-400', border: 'border-amber-500/30' },
+                { label: 'Goals', val: summary.goals, color: 'text-indigo-400', border: 'border-indigo-500/30' },
+              ].map((item, i) => (
                 <div
-                  key={node.label}
-                  className="bg-[#FFFFFF] border border-[#E6E5DC] rounded-xl p-6 shadow-subtle space-y-3 hover:border-[#CBD4C7] transition-all"
+                  key={i}
+                  className={`p-2.5 rounded-xl bg-slate-900/80 backdrop-blur-md border ${item.border} text-center`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-[#777E77]">{node.label}</span>
-                    <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center text-white"
-                      style={{ backgroundColor: node.color }}
-                    >
-                      <Icon className="w-4 h-4" strokeWidth={1.75} />
-                    </div>
-                  </div>
-                  <p className="text-2xl font-mono font-medium text-[#1D2923] tabular-nums">
-                    {formatINR(node.val)}
-                  </p>
-                  <div className="w-full h-1.5 rounded-full bg-[#F0F1E9] overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-300"
-                      style={{
-                        backgroundColor: node.color,
-                        width: totalCapitalInPlay > 0 ? `${Math.min(100, Math.round((node.val / totalCapitalInPlay) * 100))}%` : '0%',
-                      }}
-                    />
+                  <div className="text-[10px] text-slate-400 font-medium">{item.label}</div>
+                  <div className={`text-xs font-bold font-mono mt-0.5 ${item.color}`}>
+                    {formatINR(item.val)}
                   </div>
                 </div>
-              );
-            })}
+              ))}
+            </div>
           </div>
         </div>
       </main>

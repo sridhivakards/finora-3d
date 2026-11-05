@@ -10,33 +10,40 @@ module.exports = {
     extend: {
       colors: {
         finora: {
-          bg: '#F7F6F0',
-          surface: '#FFFFFF',
-          secondary: '#F0F1E9',
-          text: '#1D2923',
-          textSecondary: '#777E77',
-          textMuted: '#9A9F98',
-          olive: '#244C3B',
-          oliveDark: '#1D3D30',
-          oliveSecondary: '#466B56',
-          sage: '#A6B6A1',
-          lightSage: '#E5EBDD',
-          border: '#E6E5DC',
-          income: '#39845B',
-          expense: '#DB896B',
-          warning: '#D6A45E',
-          error: '#C76B63',
+          bg: '#060913',
+          card: '#0c1222',
+          cardHover: '#131d36',
+          border: 'rgba(255, 255, 255, 0.08)',
+          borderGlow: 'rgba(56, 189, 248, 0.3)',
+          cyan: '#06b6d4',
+          cyanGlow: '#22d3ee',
+          indigo: '#6366f1',
+          violet: '#8b5cf6',
+          amber: '#f59e0b',
+          emerald: '#10b981',
+          rose: '#f43f5e',
+          textMuted: '#94a3b8',
+          textLight: '#f8fafc',
         }
       },
-      fontFamily: {
-        serif: ['var(--font-dm-serif)', 'DM Serif Display', 'Georgia', 'serif'],
-        sans: ['var(--font-dm-sans)', 'DM Sans', 'system-ui', 'sans-serif'],
-        mono: ['var(--font-ibm-mono)', 'IBM Plex Mono', 'Menlo', 'monospace'],
+      backgroundImage: {
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+        'cyber-grid': 'linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px)',
       },
-      boxShadow: {
-        'subtle': '0 1px 3px 0 rgba(29, 41, 35, 0.04), 0 1px 2px -1px rgba(29, 41, 35, 0.03)',
-        'card': '0 4px 6px -1px rgba(29, 41, 35, 0.03), 0 2px 4px -2px rgba(29, 41, 35, 0.03)',
-        'dropdown': '0 10px 15px -3px rgba(29, 41, 35, 0.06), 0 4px 6px -4px rgba(29, 41, 35, 0.04)',
+      animation: {
+        'pulse-glow': 'pulseGlow 3s ease-in-out infinite',
+        'float': 'float 6s ease-in-out infinite',
+        'spin-slow': 'spin 20s linear infinite',
+      },
+      keyframes: {
+        pulseGlow: {
+          '0%, 100%': { opacity: '0.4', filter: 'blur(20px)' },
+          '50%': { opacity: '0.8', filter: 'blur(30px)' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-10px)' },
+        }
       }
     },
   },

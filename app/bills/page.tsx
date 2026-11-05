@@ -1,31 +1,23 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardSidebar from '@/components/DashboardSidebar';
 import { db } from '@/lib/db';
 import { formatINR, formatDate } from '@/lib/utils';
 import { Bill } from '@/lib/types';
 import {
-  ReceiptText,
+  CreditCard,
   Plus,
   CheckCircle2,
   Clock,
   AlertCircle,
   Calendar,
   X,
-  Trash2,
-  Inbox
+  Tv,
+  Wifi,
+  Zap,
+  Smartphone
 } from 'lucide-react';
-
-const CATEGORIES = [
-  'Utilities',
-  'Housing & Rent',
-  'Subscriptions',
-  'Insurance',
-  'Telecom & Internet',
-  'Loans & EMI',
-  'Other',
-];
 
 export default function BillsPage() {
   const [bills, setBills] = useState<Bill[]>([]);
@@ -76,29 +68,17 @@ export default function BillsPage() {
 
   const handleCreateBill = async (e: React.FormEvent) => {
     e.preventDefault();
-    const amt = parseFloat(amount);
-    if (!title.trim()) {
-      setErrorMsg('Please specify a bill title.');
-      return;
-    }
-    if (isNaN(amt) || amt <= 0) {
-      setErrorMsg('Please enter a valid amount.');
-      return;
-    }
-    if (!dueDate) {
-      setErrorMsg('Please enter a due date.');
-      return;
-    }
-
+    const numAmount = parseFloat(amount);
+    if (!title.trim() || isNaN(numAmount) || numAmount <= 0 || !dueDate) return;
     setSubmitting(true);
     try {
       await db.bills.add({
         title: title.trim(),
-        amount: amt,
+        amount: numAmount,
         due_date: dueDate,
-        category,
-        recurring_frequency: frequency,
         status: 'Upcoming',
+        recurring_frequency: frequency,
+        category,
       });
       setTitle('');
       setAmount('');
@@ -106,275 +86,223 @@ export default function BillsPage() {
       setModalOpen(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(err?.message ?? 'Failed to add bill.');
+      setErrorMsg(err?.message ?? 'Failed to create bill.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const stats = useMemo(() => {
-    const upcoming = bills.filter((b) => b.status === 'Upcoming');
-    const upcomingSum = upcoming.reduce((s, b) => s + Number(b.amount), 0);
-    const paidSum = bills.filter((b) => b.status === 'Paid').reduce((s, b) => s + Number(b.amount), 0);
-    return {
-      upcomingCount: upcoming.length,
-      upcomingSum,
-      paidSum,
-      totalCount: bills.length,
-    };
-  }, [bills]);
+  const getDaysLeft = (dueDateStr: string) => {
+    const diff = new Date(dueDateStr).getTime() - new Date().getTime();
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    return days;
+  };
+
+  const totalUpcoming = bills
+    .filter((b) => b.status === 'Upcoming')
+    .reduce((s, b) => s + b.amount, 0);
 
   return (
-    <div className="min-h-screen bg-[#F7F6F0] text-[#1D2923]">
+    <div className="min-h-screen bg-[#060913] text-slate-100 flex">
       <DashboardSidebar />
 
-      <main className="lg:pl-64 pt-14 lg:pt-0 pb-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#E6E5DC]">
-            <div>
-              <h1 className="font-serif text-3xl font-normal text-[#1D2923] tracking-tight">
-                Bills & Subscriptions
-              </h1>
-              <p className="text-sm text-[#777E77] mt-1 font-sans">
-                Upcoming recurring liabilities, due dates and payment tracking
-              </p>
+      <main className="flex-1 lg:pl-64 pt-16 lg:pt-0 min-h-screen flex flex-col">
+        {/* Header */}
+        <header className="px-6 lg:px-10 py-6 border-b border-slate-800/80 bg-[#080d1e]/80 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-0 z-20">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                RECURRING
+              </span>
+              <span className="text-xs text-slate-400">• Bills & Subscriptions</span>
             </div>
-            <button
-              onClick={() => {
-                setErrorMsg('');
-                setModalOpen(true);
-              }}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#244C3B] hover:bg-[#1D3D30] text-white text-xs font-medium rounded-lg transition-colors shadow-subtle"
-            >
-              <Plus className="w-3.5 h-3.5" strokeWidth={1.75} />
-              <span>Add Bill</span>
-            </button>
+            <h1 className="text-2xl font-black tracking-tight text-white mt-1">
+              Bills & Subscriptions
+            </h1>
+            <p className="text-xs text-slate-400">
+              Track due dates for rent, broadband, OTT platforms, and mobile plans
+            </p>
           </div>
 
-          {/* Metric Highlights */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-[#FFFFFF] border border-[#E6E5DC] rounded-xl p-4 shadow-subtle">
-              <span className="text-xs text-[#777E77] block">Upcoming Obligations</span>
-              <span className="text-lg font-mono font-medium text-[#DB896B] mt-1 block tabular-nums">
-                {formatINR(stats.upcomingSum)}
-              </span>
-            </div>
-            <div className="bg-[#FFFFFF] border border-[#E6E5DC] rounded-xl p-4 shadow-subtle">
-              <span className="text-xs text-[#777E77] block">Pending Payments</span>
-              <span className="text-lg font-mono font-medium text-[#1D2923] mt-1 block tabular-nums">
-                {stats.upcomingCount} bills
-              </span>
-            </div>
-            <div className="bg-[#FFFFFF] border border-[#E6E5DC] rounded-xl p-4 shadow-subtle">
-              <span className="text-xs text-[#777E77] block">Paid this Cycle</span>
-              <span className="text-lg font-mono font-medium text-[#39845B] mt-1 block tabular-nums">
-                {formatINR(stats.paidSum)}
-              </span>
-            </div>
-            <div className="bg-[#FFFFFF] border border-[#E6E5DC] rounded-xl p-4 shadow-subtle">
-              <span className="text-xs text-[#777E77] block">Active Subscriptions</span>
-              <span className="text-lg font-mono font-medium text-[#244C3B] mt-1 block tabular-nums">
-                {stats.totalCount} registered
-              </span>
-            </div>
-          </div>
+          <button
+            onClick={() => setModalOpen(true)}
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-semibold text-xs flex items-center gap-2 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:scale-[1.02] transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Recurring Bill</span>
+          </button>
+        </header>
 
-          {errorMsg && (
-            <div className="p-4 bg-[#C76B63]/10 border border-[#C76B63]/30 rounded-xl text-[#C76B63] text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" strokeWidth={1.75} />
-              <span>{errorMsg}</span>
-            </div>
-          )}
-
-          {/* Bills Ledger Table */}
-          <div className="bg-[#FFFFFF] border border-[#E6E5DC] rounded-xl shadow-subtle overflow-hidden">
-            <div className="p-6 border-b border-[#E6E5DC]">
-              <h3 className="font-serif text-lg font-normal text-[#1D2923]">
-                Scheduled Liabilities
-              </h3>
-              <p className="text-xs text-[#777E77] mt-0.5">
-                Mark items as paid when settled to maintain payment status
-              </p>
-            </div>
-
-            {bills.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-[#F7F6F0]/70 border-b border-[#E6E5DC] text-[#777E77]">
-                      <th className="py-3 px-6 font-medium">Bill Title</th>
-                      <th className="py-3 px-6 font-medium">Category</th>
-                      <th className="py-3 px-6 font-medium">Due Date</th>
-                      <th className="py-3 px-6 font-medium">Frequency</th>
-                      <th className="py-3 px-6 font-medium">Status</th>
-                      <th className="py-3 px-6 font-medium text-right">Amount</th>
-                      <th className="py-3 px-6 font-medium text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#E6E5DC]">
-                    {bills.map((bill) => {
-                      const isPaid = bill.status === 'Paid';
-                      return (
-                        <tr key={bill.id} className="hover:bg-[#F0F1E9]/40 transition-colors">
-                          <td className="py-3.5 px-6 font-medium text-[#1D2923]">
-                            {bill.title}
-                          </td>
-                          <td className="py-3.5 px-6">
-                            <span className="inline-block px-2.5 py-0.5 rounded-md bg-[#F0F1E9] text-[#1D2923] text-[11px]">
-                              {bill.category}
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-6 font-mono text-[#777E77] tabular-nums whitespace-nowrap">
-                            {formatDate(bill.due_date)}
-                          </td>
-                          <td className="py-3.5 px-6 text-[#777E77]">
-                            {bill.recurring_frequency}
-                          </td>
-                          <td className="py-3.5 px-6">
-                            <span
-                              className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${
-                                isPaid
-                                  ? 'bg-[#E5EBDD] text-[#39845B]'
-                                  : 'bg-[#DB896B]/10 text-[#DB896B]'
-                              }`}
-                            >
-                              {isPaid ? 'Paid' : 'Upcoming'}
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-6 text-right font-mono font-medium text-[#1D2923] tabular-nums">
-                            {formatINR(bill.amount)}
-                          </td>
-                          <td className="py-3.5 px-6 text-right">
-                            <div className="inline-flex items-center gap-2">
-                              <button
-                                onClick={() => handleToggle(bill.id, bill.status)}
-                                className={`text-[11px] font-medium px-2 py-1 rounded-md transition-colors ${
-                                  isPaid
-                                    ? 'bg-[#F0F1E9] text-[#777E77] hover:text-[#1D2923]'
-                                    : 'bg-[#244C3B] text-white hover:bg-[#1D3D30]'
-                                }`}
-                              >
-                                {isPaid ? 'Mark Due' : 'Mark Paid'}
-                              </button>
-                              <button
-                                onClick={() => handleDelete(bill.id)}
-                                title="Delete"
-                                className="p-1 rounded-md text-[#9A9F98] hover:text-[#C76B63] hover:bg-[#F0F1E9] transition-colors"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" strokeWidth={1.75} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+        {/* Content */}
+        <div className="p-6 lg:p-10 space-y-8">
+          {/* Quick Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-5 rounded-2xl bg-[#0c1222] border border-slate-800">
+              <span className="text-xs text-slate-400 font-medium">Pending Upcoming</span>
+              <div className="text-2xl font-black text-amber-400 mt-1">
+                {formatINR(totalUpcoming)}
               </div>
-            ) : (
-              <div className="py-16 text-center">
-                <Inbox className="w-8 h-8 text-[#9A9F98] stroke-1 mx-auto mb-2" />
-                <p className="text-xs text-[#777E77]">No recurring bills scheduled.</p>
-                <button
-                  onClick={() => setModalOpen(true)}
-                  className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#244C3B] hover:bg-[#1D3D30] text-white text-xs font-medium rounded-lg transition-colors"
+              <p className="text-[11px] text-slate-400 mt-1">Total pending this cycle</p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-[#0c1222] border border-slate-800">
+              <span className="text-xs text-slate-400 font-medium">Active Services</span>
+              <div className="text-2xl font-black text-cyan-300 mt-1">{bills.length}</div>
+              <p className="text-[11px] text-slate-400 mt-1">Internet, Netflix, Bescom, Airtel</p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-[#0c1222] border border-slate-800">
+              <span className="text-xs text-slate-400 font-medium">Next Due Date</span>
+              <div className="text-2xl font-black text-white mt-1">In 3 Days</div>
+              <p className="text-[11px] text-emerald-400 font-semibold mt-1">ACT Fibernet Bill</p>
+            </div>
+          </div>
+
+          {/* Bills List */}
+          <div className="space-y-3">
+            {bills.map((bill) => {
+              const daysLeft = getDaysLeft(bill.due_date);
+              const isPaid = bill.status === 'Paid';
+
+              return (
+                <div
+                  key={bill.id}
+                  className={`p-5 rounded-2xl bg-[#0c1222] border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+                    isPaid ? 'border-slate-800/80 opacity-70' : 'border-slate-800 hover:border-amber-500/40 shadow-lg'
+                  }`}
                 >
-                  <Plus className="w-3.5 h-3.5" strokeWidth={1.75} />
-                  <span>Add First Bill</span>
-                </button>
-              </div>
-            )}
+                  <div className="flex items-center gap-4">
+                    <div
+                      className={`w-11 h-11 rounded-xl flex items-center justify-center ${
+                        isPaid
+                          ? 'bg-emerald-500/10 text-emerald-400'
+                          : daysLeft <= 3
+                          ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                          : 'bg-cyan-500/10 text-cyan-400'
+                      }`}
+                    >
+                      <CreditCard className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-base font-bold text-white">{bill.title}</h3>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800">
+                          {bill.recurring_frequency}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
+                        <span>Due: {formatDate(bill.due_date)}</span>
+                        <span>•</span>
+                        <span
+                          className={
+                            isPaid
+                              ? 'text-emerald-400 font-medium'
+                              : daysLeft < 0
+                              ? 'text-rose-400 font-bold'
+                              : daysLeft <= 3
+                              ? 'text-amber-400 font-bold'
+                              : 'text-slate-300'
+                          }
+                        >
+                          {isPaid
+                            ? 'Settled'
+                            : daysLeft < 0
+                            ? `Overdue by ${Math.abs(daysLeft)} days`
+                            : daysLeft === 0
+                            ? 'Due Today'
+                            : `Due in ${daysLeft} days`}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 justify-between sm:justify-end">
+                    <div className="text-right">
+                      <div className="text-lg font-black font-mono text-white">
+                        {formatINR(bill.amount)}
+                      </div>
+                      <span className="text-[10px] text-slate-400">{bill.category}</span>
+                    </div>
+
+                    <button
+                      onClick={() => handleToggle(bill.id, bill.status)}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                        isPaid
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30'
+                          : 'bg-slate-900 border border-slate-700 hover:border-emerald-500 text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>{isPaid ? 'Paid' : 'Mark as Paid'}</span>
+                    </button>
+                    <button
+                      onClick={() => handleDelete(bill.id)}
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                      title="Delete Bill"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </main>
 
       {/* Add Bill Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1D2923]/40 backdrop-blur-xs">
-          <div className="w-full max-w-md bg-[#FFFFFF] border border-[#E6E5DC] rounded-xl shadow-dropdown overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-[#E6E5DC]">
-              <h3 className="font-serif text-lg font-normal text-[#1D2923]">
-                Schedule Recurring Bill
-              </h3>
-              <button
-                onClick={() => setModalOpen(false)}
-                className="p-1 rounded-md text-[#9A9F98] hover:text-[#1D2923] hover:bg-[#F0F1E9]"
-              >
-                <X className="w-4 h-4" strokeWidth={1.75} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+          <div className="w-full max-w-sm bg-[#0c1222] border border-slate-700/80 rounded-2xl p-6 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h3 className="font-bold text-white text-base">Add Subscription / Bill</h3>
+              <button onClick={() => setModalOpen(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateBill} className="p-6 space-y-4">
+            <form onSubmit={handleCreateBill} className="mt-4 space-y-4 text-xs">
               <div>
-                <label className="block text-xs font-medium text-[#777E77] mb-1.5">
-                  Bill Title
-                </label>
+                <label className="block text-slate-400 mb-1 font-medium">Service / Title</label>
                 <input
                   type="text"
+                  required
+                  placeholder="e.g. Netflix Premium, Rent, ACT Fibernet"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. JioFiber Broadband"
-                  required
-                  className="w-full px-3.5 py-2.5 bg-[#FFFFFF] border border-[#E6E5DC] rounded-lg text-xs text-[#1D2923] focus:border-[#244C3B] focus:ring-1 focus:ring-[#244C3B] outline-none transition-all"
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-[#777E77] mb-1.5">
-                    Amount (INR)
-                  </label>
-                  <input
-                    type="number"
-                    step="1"
-                    min="1"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="1179"
-                    required
-                    className="w-full px-3.5 py-2 bg-[#FFFFFF] border border-[#E6E5DC] rounded-lg text-xs font-mono text-[#1D2923] focus:border-[#244C3B] focus:ring-1 focus:ring-[#244C3B] outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-[#777E77] mb-1.5">
-                    Due Date
-                  </label>
-                  <input
-                    type="date"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    required
-                    className="w-full px-3.5 py-2 bg-[#FFFFFF] border border-[#E6E5DC] rounded-lg text-xs font-mono text-[#1D2923] focus:border-[#244C3B] focus:ring-1 focus:ring-[#244C3B] outline-none transition-all"
-                  />
-                </div>
+              <div>
+                <label className="block text-slate-400 mb-1 font-medium">Amount (₹ INR)</label>
+                <input
+                  type="number"
+                  required
+                  placeholder="999"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500 font-bold"
+                />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-medium text-[#777E77] mb-1.5">
-                    Category
-                  </label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#FFFFFF] border border-[#E6E5DC] rounded-lg text-xs text-[#1D2923] focus:border-[#244C3B] focus:ring-1 focus:ring-[#244C3B] outline-none transition-all cursor-pointer"
-                  >
-                    {CATEGORIES.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
+                  <label className="block text-slate-400 mb-1 font-medium">Due Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500"
+                  />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-[#777E77] mb-1.5">
-                    Frequency
-                  </label>
+                  <label className="block text-slate-400 mb-1 font-medium">Frequency</label>
                   <select
                     value={frequency}
                     onChange={(e) => setFrequency(e.target.value as any)}
-                    className="w-full px-3.5 py-2.5 bg-[#FFFFFF] border border-[#E6E5DC] rounded-lg text-xs text-[#1D2923] focus:border-[#244C3B] focus:ring-1 focus:ring-[#244C3B] outline-none transition-all cursor-pointer"
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500"
                   >
                     <option value="Monthly">Monthly</option>
                     <option value="Quarterly">Quarterly</option>
@@ -383,22 +311,12 @@ export default function BillsPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-4 border-t border-[#E6E5DC]">
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 bg-[#F0F1E9] hover:bg-[#E6E5DC] text-[#1D2923] text-xs font-medium rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-5 py-2 bg-[#244C3B] hover:bg-[#1D3D30] text-white text-xs font-medium rounded-lg transition-colors shadow-subtle flex items-center gap-1.5 disabled:opacity-50"
-                >
-                  {submitting ? 'Scheduling...' : 'Save Bill'}
-                </button>
-              </div>
+              <button
+                type="submit"
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-indigo-600 text-white font-semibold shadow-lg shadow-amber-500/25 mt-2"
+              >
+                Track Bill
+              </button>
             </form>
           </div>
         </div>

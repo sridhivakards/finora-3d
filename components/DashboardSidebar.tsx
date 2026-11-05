@@ -6,31 +6,36 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   ArrowLeftRight,
-  Wallet,
-  ChartNoAxesCombined,
-  TrendingUp,
+  PieChart,
   Target,
-  ReceiptText,
-  MessageCircle,
+  Sparkles,
+  TrendingUp,
+  CreditCard,
+  Briefcase,
   Settings,
   Plus,
+  Orbit,
   LogOut,
-  UserRound,
+  ShieldCheck,
+  RefreshCw,
+  Bell,
   Menu,
   X
 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { createBrowserClient } from '@supabase/ssr';
 import AddTransactionModal from './AddTransactionModal';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/transaction', label: 'Transactions', icon: ArrowLeftRight },
-  { href: '/budgets', label: 'Budgets', icon: Wallet },
-  { href: '/reports', label: 'Reports', icon: ChartNoAxesCombined },
-  { href: '/investments', label: 'Investments', icon: TrendingUp },
-  { href: '/goals', label: 'Goals', icon: Target },
-  { href: '/bills', label: 'Bills', icon: ReceiptText },
-  { href: '/ai', label: 'AI Assistant', icon: MessageCircle },
+  { href: '/reports', label: 'Reports & Analytics', icon: PieChart },
+  { href: '/budgets', label: 'Budgets', icon: Target },
+  { href: '/predictions', label: 'ML Predictions', icon: TrendingUp },
+  { href: '/ai', label: 'Ask Finora AI', icon: Sparkles, badge: 'AI' },
+  { href: '/universe', label: '3D Money Universe', icon: Orbit, badge: '3D' },
+  { href: '/goals', label: 'Financial Goals', icon: Target },
+  { href: '/bills', label: 'Bills & Subscriptions', icon: CreditCard },
+  { href: '/investments', label: 'Investments', icon: Briefcase },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -43,8 +48,10 @@ export default function DashboardSidebar() {
   const [displayName, setDisplayName] = useState('User');
 
   useEffect(() => {
-    const supabase = createClient();
-    if (supabase) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
+    if (url && key) {
+      const supabase = createBrowserClient(url, key);
       supabase.auth.getUser().then(({ data: { user } }) => {
         if (user) {
           const email = user.email || '';
@@ -56,161 +63,143 @@ export default function DashboardSidebar() {
     }
   }, []);
 
-  const handleLogout = async () => {
-    const supabase = createClient();
-    if (supabase) {
+  const handleSignOut = async () => {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
+    if (url && key) {
+      const supabase = createBrowserClient(url, key);
       await supabase.auth.signOut();
     }
     router.push('/login');
-    router.refresh();
   };
-
-  const navContent = (
-    <div className="flex flex-col h-full bg-[#FFFFFF] border-r border-[#E6E5DC] text-[#1D2923] select-none">
-      {/* Brand Header */}
-      <div className="px-6 py-7 border-b border-[#E6E5DC]/70">
-        <Link href="/dashboard" className="flex items-center gap-3 group">
-          <div className="w-9 h-9 rounded-lg bg-[#244C3B] flex items-center justify-center text-white font-serif font-bold text-lg shadow-sm">
-            F
-          </div>
-          <div>
-            <span className="font-serif text-xl tracking-tight text-[#1D2923] block leading-none">
-              FINORA
-            </span>
-            <span className="text-[11px] font-sans text-[#777E77] tracking-wider uppercase mt-1 block">
-              Financial Intelligence
-            </span>
-          </div>
-        </Link>
-      </div>
-
-      {/* Primary Action Button */}
-      <div className="px-4 pt-5 pb-3">
-        <button
-          onClick={() => {
-            setModalOpen(true);
-            setMobileOpen(false);
-          }}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#244C3B] hover:bg-[#1D3D30] text-white text-xs font-medium rounded-lg transition-colors shadow-subtle"
-        >
-          <Plus className="w-4 h-4" strokeWidth={1.75} />
-          <span>Add Transaction</span>
-        </button>
-      </div>
-
-      {/* Navigation List */}
-      <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const isActive = pathname === item.href;
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setMobileOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                isActive
-                  ? 'bg-[#E5EBDD] text-[#244C3B] font-semibold'
-                  : 'text-[#777E77] hover:text-[#1D2923] hover:bg-[#F0F1E9]'
-              }`}
-            >
-              <Icon
-                className={`w-4 h-4 shrink-0 transition-colors ${
-                  isActive ? 'text-[#244C3B]' : 'text-[#777E77]'
-                }`}
-                strokeWidth={1.75}
-              />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* User Profile at Bottom */}
-      <div className="p-4 border-t border-[#E6E5DC]/80 bg-[#F7F6F0]/60">
-        <div className="flex items-center justify-between gap-3">
-          <Link
-            href="/settings"
-            onClick={() => setMobileOpen(false)}
-            className="flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-85 transition-opacity"
-          >
-            <div className="w-8 h-8 rounded-full bg-[#E5EBDD] border border-[#CBD4C7] flex items-center justify-center text-[#244C3B] font-semibold text-xs shrink-0">
-              {displayName.charAt(0).toUpperCase()}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium text-[#1D2923] truncate leading-tight">
-                {displayName}
-              </p>
-              <p className="text-[10px] text-[#9A9F98] truncate leading-tight mt-0.5">
-                {userEmail || 'Active session'}
-              </p>
-            </div>
-          </Link>
-          <button
-            onClick={handleLogout}
-            title="Sign out"
-            aria-label="Sign out"
-            className="p-1.5 rounded-md text-[#9A9F98] hover:text-[#C76B63] hover:bg-[#FFFFFF] border border-transparent hover:border-[#E6E5DC] transition-colors"
-          >
-            <LogOut className="w-3.5 h-3.5" strokeWidth={1.75} />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <>
-      {/* Desktop Fixed Sidebar */}
-      <aside className="hidden lg:block fixed inset-y-0 left-0 w-64 z-30">
-        {navContent}
-      </aside>
-
-      {/* Mobile Header Bar */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-[#FFFFFF] border-b border-[#E6E5DC] z-40 px-4 flex items-center justify-between">
+      {/* Mobile Top Header Bar */}
+      <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-[#0a0f20] border-b border-slate-800 text-white z-40 fixed top-0 left-0 right-0">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-md bg-[#244C3B] flex items-center justify-center text-white font-serif font-bold text-sm">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center font-bold text-sm">
             F
           </div>
-          <span className="font-serif text-lg tracking-tight text-[#1D2923]">FINORA</span>
+          <span className="font-extrabold tracking-tight">FINORA</span>
         </Link>
-        <button
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="p-2 rounded-lg text-[#1D2923] hover:bg-[#F0F1E9]"
-          aria-label="Toggle menu"
-        >
-          {mobileOpen ? <X className="w-5 h-5" strokeWidth={1.75} /> : <Menu className="w-5 h-5" strokeWidth={1.75} />}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setModalOpen(true)}
+            className="px-2.5 py-1.5 rounded-lg bg-cyan-500 text-slate-950 font-bold text-xs flex items-center gap-1"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Add</span>
+          </button>
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white"
+          >
+            {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
       </div>
 
-      {/* Mobile Drawer Backdrop */}
-      {mobileOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-[#1D2923]/30 z-40 backdrop-blur-xs"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-
-      {/* Mobile Drawer */}
-      <div
-        className={`lg:hidden fixed inset-y-0 left-0 w-64 z-50 transform transition-transform duration-200 ease-in-out ${
+      {/* Main Sidebar Desktop + Mobile Drawer */}
+      <aside
+        className={`fixed top-0 bottom-0 left-0 z-40 w-64 bg-[#0a0f20] border-r border-slate-800/80 flex flex-col transition-transform duration-300 lg:translate-x-0 ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {navContent}
-      </div>
+        {/* Brand */}
+        <div className="p-6 pb-4 border-b border-slate-800/60 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-600 to-violet-600 flex items-center justify-center shadow-lg shadow-cyan-500/25 group-hover:scale-105 transition-transform">
+              <span className="font-black text-lg text-white">F</span>
+            </div>
+            <div>
+              <span className="font-extrabold text-lg tracking-tight text-white flex items-center gap-1.5">
+                FINORA
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              </span>
+              <p className="text-[10px] text-cyan-400 font-mono tracking-wider uppercase -mt-0.5">
+                Financial OS
+              </p>
+            </div>
+          </Link>
+        </div>
 
-      {/* Add Transaction Modal */}
+        {/* Quick Action */}
+        <div className="p-4">
+          <button
+            onClick={() => setModalOpen(true)}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-semibold text-xs shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:scale-[1.01] active:scale-[0.99] transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span>+ Add Transaction</span>
+          </button>
+        </div>
+
+        {/* Navigation items */}
+        <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
+          {NAV_ITEMS.map((item) => {
+            const isActive = pathname === item.href;
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileOpen(false)}
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                  isActive
+                    ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-cyan-400' : 'text-slate-400'}`} />
+                  <span>{item.label}</span>
+                </div>
+                {item.badge && (
+                  <span
+                    className={`text-[9px] font-mono px-1.5 py-0.2 rounded-md ${
+                      item.badge === '3D'
+                        ? 'bg-violet-500/20 text-violet-300 border border-violet-500/40'
+                        : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                    }`}
+                  >
+                    {item.badge}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Bottom User Profile & Logout */}
+        <div className="p-4 border-t border-slate-800/80 bg-slate-950/40">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center font-bold text-xs text-white uppercase">
+                {displayName.charAt(0)}
+              </div>
+              <div className="overflow-hidden">
+                <p className="text-xs font-semibold text-white truncate">{displayName}</p>
+                <p className="text-[10px] text-slate-400 truncate font-mono">₹ Indian Mode</p>
+              </div>
+            </div>
+            <button
+              onClick={handleSignOut}
+              title="Sign Out"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Global Add Transaction Modal */}
       <AddTransactionModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onSuccess={() => {
           setModalOpen(false);
-          // If on a page with transactions, trigger window refresh or custom event
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new Event('finora:transaction-changed'));
-          }
         }}
       />
     </>
