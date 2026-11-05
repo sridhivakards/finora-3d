@@ -90,7 +90,7 @@ User Question: "${question}"`;
         const pct = context.totalExpenses > 0 ? Math.round((topAmt / context.totalExpenses) * 100) : 0;
         const secondCat = entries[1] ? ` Your next highest category is ${entries[1][0]} at ₹${entries[1][1].toLocaleString('en-IN')}.` : '';
 
-        answer = `Your highest spending category this month is **${topCat}** at **₹${topAmt.toLocaleString('en-IN')}**, which represents **${pct}%** of your total monthly expenses.${secondCat}\n\n💡 If you want to optimize your monthly outflow, ${topCat} offers the highest leverage for potential savings.`;
+        answer = `Your highest spending category this month is **${topCat}** at **₹${topAmt.toLocaleString('en-IN')}**, which represents **${pct}%** of your total monthly expenses.${secondCat}\n\nIf you want to optimize your monthly outflow, ${topCat} offers the highest leverage for potential savings.`;
       } else {
         answer = "You haven't recorded any expenses yet. Once you log transactions, I can pinpoint your largest expense areas.";
       }
@@ -103,13 +103,13 @@ User Question: "${question}"`;
     else if (lowerQ.includes('save') || lowerQ.includes('balance') || lowerQ.includes('savings')) {
       answer = `Your current balance is **₹${context.currentBalance.toLocaleString('en-IN')}**, reflecting a savings rate of **${context.savingsRate}%**.\n\n${
         context.savingsRate >= 30
-          ? "🎉 Outstanding! You are exceeding the conventional 20% savings rule. This surplus can accelerate your Emergency Fund or investment portfolio."
+          ? "Outstanding! You are exceeding the conventional 20% savings rule. This surplus can accelerate your Emergency Fund or investment portfolio."
           : "Consider allocating 10% more into savings before beginning discretionary spends."
       }`;
     }
     // 4. Next month prediction
     else if (lowerQ.includes('next month') || lowerQ.includes('predict') || lowerQ.includes('forecast')) {
-      answer = `Based on your historical spending patterns, the Finora Gradient Boosting Machine Learning model estimates your expenses next month to be approximately **₹${context.nextMonthPrediction.toLocaleString('en-IN')}**.\n\n⚠️ *Note: This is a statistical estimate based on recent expense velocity rather than a guaranteed outcome.*`;
+      answer = `Based on your historical spending patterns, the Finora Gradient Boosting Machine Learning model estimates your expenses next month to be approximately **₹${context.nextMonthPrediction.toLocaleString('en-IN')}**.\n\n*Note: This is a statistical estimate based on recent expense velocity rather than a guaranteed outcome.*`;
     }
     // 5. Unusual transactions
     else if (lowerQ.includes('unusual') || lowerQ.includes('anomaly') || lowerQ.includes('strange') || lowerQ.includes('flagged')) {
@@ -117,7 +117,7 @@ User Question: "${question}"`;
         const item = context.unusualTransactions[0];
         answer = `Yes, our Isolation Forest detector flagged **${context.unusualTransactions.length} transaction(s)**:\n\n• **${item.description}** (₹${item.amount.toLocaleString('en-IN')} in ${item.category}): This is noticeably higher than your standard spending profile for ${item.category}.\n\nWould you like to review or categorize it as an intentional one-off purchase?`;
       } else {
-        answer = "✅ No unusual transactions detected! All recent expenses fall within your typical statistical distribution.";
+        answer = "No unusual transactions detected! All recent expenses fall within your typical statistical distribution.";
       }
     }
     // 6. Can I reduce food / optimize budget?

@@ -58,7 +58,7 @@ export default function SignupPage() {
       if (data.user && !data.session) {
         // Email confirmation is required — tell the user clearly
         setSuccessMsg(
-          `✅ Account created! We sent a confirmation email to ${email.trim()}. Please check your inbox (and spam folder) and click the link to activate your account, then come back to log in.`
+          `Account created! We sent a confirmation email to ${email.trim()}. Please check your inbox (and spam folder) and click the link to activate your account, then come back to log in.`
         );
         setLoading(false);
         return;

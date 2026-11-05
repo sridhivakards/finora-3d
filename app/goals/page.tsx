@@ -58,7 +58,7 @@ const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>
 function getGoalTier(pct: number) {
   if (pct >= 100) {
     return {
-      title: 'Conquered 🏆',
+      title: 'Conquered',
       color: '#10b981',
       badgeBg: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
       gradient: 'from-emerald-500 to-teal-400',
@@ -445,7 +445,7 @@ export default function GoalsPage() {
                           </div>
                           <div className="text-[11px] text-indigo-300 font-medium pt-1">
                             {remaining === 0 ? (
-                              <span className="text-emerald-400 font-bold">Completed 🎉</span>
+                              <span className="text-emerald-400 font-bold">Completed</span>
                             ) : (
                               <span>{formatINR(remaining)} remaining</span>
                             )}
@@ -568,7 +568,7 @@ export default function GoalsPage() {
                     type="submit"
                     className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-semibold text-xs shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40"
                   >
-                    Confirm Deposit 🚀
+                    Confirm Deposit
                   </button>
                 </div>
               </form>

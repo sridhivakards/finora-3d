@@ -31,7 +31,12 @@ import {
   TrendingUp,
   DollarSign,
   PieChart,
-  Target
+  Target,
+  BarChart3,
+  CreditCard,
+  Wallet,
+  Utensils,
+  FileText
 } from 'lucide-react';
 
 interface ChatMessage {
@@ -46,14 +51,14 @@ interface ChatMessage {
 type PromptCategory = 'All' | 'Spending' | 'Forecast' | 'Anomalies' | 'Optimization';
 
 const CATEGORIZED_PROMPTS: { category: PromptCategory; prompt: string; icon: string }[] = [
-  { category: 'Spending', prompt: 'Where am I spending the most?', icon: '📊' },
-  { category: 'Spending', prompt: 'How much did I spend this month?', icon: '💳' },
-  { category: 'Optimization', prompt: 'How much did I save and what is my savings rate?', icon: '💰' },
-  { category: 'Forecast', prompt: 'What will my expenses look like next month?', icon: '🔮' },
-  { category: 'Anomalies', prompt: 'Which transactions look unusual?', icon: '⚠️' },
-  { category: 'Optimization', prompt: 'Can I reduce my food expenses?', icon: '🥗' },
-  { category: 'Spending', prompt: 'Give me a summary of my finances.', icon: '📑' },
-  { category: 'Optimization', prompt: 'How close am I to my budget caps?', icon: '🎯' },
+  { category: 'Spending', prompt: 'Where am I spending the most?', icon: 'bar-chart' },
+  { category: 'Spending', prompt: 'How much did I spend this month?', icon: 'credit-card' },
+  { category: 'Optimization', prompt: 'How much did I save and what is my savings rate?', icon: 'wallet' },
+  { category: 'Forecast', prompt: 'What will my expenses look like next month?', icon: 'trending-up' },
+  { category: 'Anomalies', prompt: 'Which transactions look unusual?', icon: 'alert-triangle' },
+  { category: 'Optimization', prompt: 'Can I reduce my food expenses?', icon: 'utensils' },
+  { category: 'Spending', prompt: 'Give me a summary of my finances.', icon: 'file-text' },
+  { category: 'Optimization', prompt: 'How close am I to my budget caps?', icon: 'target' },
 ];
 
 export default function AIPage() {
@@ -272,7 +277,7 @@ export default function AIPage() {
       const errorMsg: ChatMessage = {
         id: 'msg-' + Date.now() + '-error',
         sender: 'finora',
-        text: `⚠️ Unable to complete request: ${err?.message || 'Connection to assistant service failed'}. Please verify your network and backend configuration.`,
+        text: `Unable to complete request: ${err?.message || 'Connection to assistant service failed'}. Please verify your network and backend configuration.`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         source: 'Finora System Warning',
       };
@@ -561,7 +566,14 @@ export default function AIPage() {
                   disabled={loading}
                   className="px-3 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 hover:border-cyan-500/40 text-slate-300 hover:text-cyan-300 text-xs whitespace-nowrap transition-all flex items-center gap-1.5 shadow-sm hover:scale-[1.01]"
                 >
-                  <span>{item.icon}</span>
+                  {item.icon === 'bar-chart' && <BarChart3 className="w-3.5 h-3.5" />}
+                  {item.icon === 'credit-card' && <CreditCard className="w-3.5 h-3.5" />}
+                  {item.icon === 'wallet' && <Wallet className="w-3.5 h-3.5" />}
+                  {item.icon === 'trending-up' && <TrendingUp className="w-3.5 h-3.5" />}
+                  {item.icon === 'alert-triangle' && <AlertTriangle className="w-3.5 h-3.5" />}
+                  {item.icon === 'utensils' && <Utensils className="w-3.5 h-3.5" />}
+                  {item.icon === 'file-text' && <FileText className="w-3.5 h-3.5" />}
+                  {item.icon === 'target' && <Target className="w-3.5 h-3.5" />}
                   <span>{item.prompt}</span>
                 </button>
               ))}

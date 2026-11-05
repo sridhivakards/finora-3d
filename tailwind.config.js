@@ -10,40 +10,38 @@ module.exports = {
     extend: {
       colors: {
         finora: {
-          bg: '#060913',
-          card: '#0c1222',
-          cardHover: '#131d36',
-          border: 'rgba(255, 255, 255, 0.08)',
-          borderGlow: 'rgba(56, 189, 248, 0.3)',
-          cyan: '#06b6d4',
-          cyanGlow: '#22d3ee',
-          indigo: '#6366f1',
-          violet: '#8b5cf6',
-          amber: '#f59e0b',
-          emerald: '#10b981',
-          rose: '#f43f5e',
-          textMuted: '#94a3b8',
-          textLight: '#f8fafc',
-        }
-      },
-      backgroundImage: {
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'cyber-grid': 'linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px)',
-      },
-      animation: {
-        'pulse-glow': 'pulseGlow 3s ease-in-out infinite',
-        'float': 'float 6s ease-in-out infinite',
-        'spin-slow': 'spin 20s linear infinite',
-      },
-      keyframes: {
-        pulseGlow: {
-          '0%, 100%': { opacity: '0.4', filter: 'blur(20px)' },
-          '50%': { opacity: '0.8', filter: 'blur(30px)' },
+          bg: '#F7F6F0',
+          card: '#FFFFFF',
+          cardHover: '#F0F1E9',
+          border: '#E6E5DC',
+          borderGlow: 'transparent',
+          cyan: '#244C3B',
+          cyanGlow: '#466B56',
+          indigo: '#244C3B',
+          violet: '#466B56',
+          amber: '#A6B6A1',
+          emerald: '#39845B',
+          rose: '#DB896B',
+          textMuted: '#777E77',
+          textLight: '#1D2923',
         },
-        float: {
-          '0%, 100%': { transform: 'translateY(0px)' },
-          '50%': { transform: 'translateY(-10px)' },
+        olive: {
+          DEFAULT: '#244C3B',
+          dark: '#1D3D30',
+          light: '#466B56',
+        },
+        sage: {
+          DEFAULT: '#A6B6A1',
+          light: '#E5EBDD',
         }
+      },
+      fontFamily: {
+        serif: ['"DM Serif Display"', 'Georgia', 'serif'],
+        sans: ['"DM Sans"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+        mono: ['"IBM Plex Mono"', 'Menlo', 'Consolas', 'monospace'],
+      },
+      boxShadow: {
+        'subtle': '0 1px 3px 0 rgba(29, 41, 35, 0.04), 0 1px 2px -1px rgba(29, 41, 35, 0.03)',
       }
     },
   },

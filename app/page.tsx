@@ -39,13 +39,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#060913] text-slate-100 selection:bg-cyan-500/30 selection:text-cyan-200 relative">
       {/* GLOBAL FULL WEBSITE BACKGROUND MOTION (GLITTER WARP) */}
-      <GlitterWarp
-        isFixed={true}
-        speed={0.8}
-        particleCount={300}
-        warpFactor={1.15}
-        colors={['#06b6d4', '#22d3ee', '#6366f1', '#8b5cf6', '#f59e0b', '#38bdf8']}
-      />
+      
 
       <div className="relative z-10">
         <Navbar />
@@ -176,13 +170,13 @@ export default function LandingPage() {
                 <span className="text-white font-bold">₹71,600</span>
               </div>
               <div className="text-rose-400/90 pt-1 border-t border-rose-500/20">
-                ❌ No predictive forecasting or velocity
+                • No predictive forecasting or velocity
               </div>
               <div className="text-rose-400/90">
-                ❌ No conversational question-answering
+                • No conversational question-answering
               </div>
               <div className="text-rose-400/90">
-                ❌ Lifeless ledger with zero behavioral context
+                • Lifeless ledger with zero behavioral context
               </div>
             </div>
           </InteractiveCreditCard>
@@ -448,7 +442,7 @@ export default function LandingPage() {
                   Your highest spending category this month is <strong>Food at ₹6,200</strong>, representing <strong>34%</strong> of your total expenditures. Your next highest is Shopping at ₹5,600.
                 </p>
                 <p className="text-slate-300 text-xs border-t border-slate-800 pt-2">
-                  💡 <strong>Actionable Tip:</strong> Consolidating dinner deliveries via weekly bulk pantry deliveries could easily save ₹1,400, bringing you back below your ₹8,000 food budget cap.
+                  <strong>Actionable Tip:</strong> Consolidating dinner deliveries via weekly bulk pantry deliveries could easily save ₹1,400, bringing you back below your ₹8,000 food budget cap.
                 </p>
               </div>
             </div>
