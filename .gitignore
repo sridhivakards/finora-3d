@@ -47,3 +47,6 @@ ENV/
 # backups & zip
 zip files/
 *.zip
+
+_pre_redesign_backup/
+

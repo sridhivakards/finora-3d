@@ -1,20 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import DashboardSidebar from '@/components/DashboardSidebar';
 import { db, FinancialSummary } from '@/lib/db';
 import { formatINR } from '@/lib/utils';
 import { Transaction } from '@/lib/types';
 import {
-  PieChart as PieIcon,
-  TrendingUp,
-  TrendingDown,
-  BarChart3,
   Calendar,
-  Sparkles,
   ArrowUpRight,
   ArrowDownRight,
-  Info
+  TrendingUp,
+  Inbox
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -24,10 +20,11 @@ import {
   BarChart,
   Bar,
   CartesianGrid,
-  Cell
+  Legend
 } from 'recharts';
 
 export default function ReportsPage() {
+  const [mounted, setMounted] = useState(false);
   const [summary, setSummary] = useState<FinancialSummary>({
     totalIncome: 0,
     totalExpenses: 0,
@@ -38,10 +35,10 @@ export default function ReportsPage() {
   });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [trendData, setTrendData] = useState<{ month: string; Income: number; Expenses: number; Savings: number }[]>([]);
-  const [histogramMode, setHistogramMode] = useState<'cashflow' | 'bins'>('cashflow');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setMounted(true);
     (async () => {
       try {
         const [txs, trend] = await Promise.all([
@@ -51,302 +48,242 @@ export default function ReportsPage() {
         const s = db.computeSummary(txs);
         setSummary(s);
         setTransactions(txs);
-        setTrendData(trend.map(t => ({ ...t, Savings: t.Income - t.Expenses })));
+        setTrendData(trend.map((t) => ({ ...t, Savings: Math.max(0, t.Income - t.Expenses) })));
       } finally {
         setLoading(false);
       }
     })();
   }, []);
 
-  // Frequency Binned Histogram Distribution from real data
-  const expensesOnly = transactions.filter((t) => t.transaction_type === 'expense');
-  const expenseBins = [
-    { range: '< ₹500',       label: 'Micro Purchases',   count: expensesOnly.filter(t => t.amount < 500).length,                      total: expensesOnly.filter(t => t.amount < 500).reduce((s,t) => s+t.amount,0),         color: '#38bdf8' },
-    { range: '₹500 - ₹1.5k', label: 'Daily Essentials',  count: expensesOnly.filter(t => t.amount >= 500 && t.amount < 1500).length,   total: expensesOnly.filter(t => t.amount >= 500 && t.amount < 1500).reduce((s,t) => s+t.amount,0), color: '#06b6d4' },
-    { range: '₹1.5k - ₹5k',  label: 'Bills & Lifestyle', count: expensesOnly.filter(t => t.amount >= 1500 && t.amount < 5000).length,  total: expensesOnly.filter(t => t.amount >= 1500 && t.amount < 5000).reduce((s,t) => s+t.amount,0), color: '#8b5cf6' },
-    { range: '> ₹5k',         label: 'Major Spikes',      count: expensesOnly.filter(t => t.amount >= 5000).length,                     total: expensesOnly.filter(t => t.amount >= 5000).reduce((s,t) => s+t.amount,0),        color: '#f43f5e' },
-  ];
+  const expensesOnly = useMemo(() => transactions.filter((t) => t.transaction_type === 'expense'), [transactions]);
 
-  // Highest spending category
-  const sortedCategories = Object.entries(summary.categorySpending).sort((a, b) => b[1] - a[1]);
-  const highestCat = sortedCategories[0] || ['—', 0];
-  const highestCatPct = summary.totalExpenses > 0 ? Math.round((Number(highestCat[1]) / summary.totalExpenses) * 100) : 0;
+  const sortedCategories = useMemo(() => {
+    return Object.entries(summary.categorySpending).sort((a, b) => b[1] - a[1]);
+  }, [summary.categorySpending]);
 
-  // Largest transaction
-  const largestTx = expensesOnly.length > 0
-    ? expensesOnly.reduce((max, t) => (t.amount > max.amount ? t : max), expensesOnly[0])
-    : null;
+  const topCategory = sortedCategories[0] || ['—', 0];
+  const topCategoryPct = summary.totalExpenses > 0 ? Math.round((Number(topCategory[1]) / summary.totalExpenses) * 100) : 0;
+
+  const largestExpense = useMemo(() => {
+    if (expensesOnly.length === 0) return null;
+    return expensesOnly.reduce((max, t) => (Number(t.amount) > Number(max.amount) ? t : max), expensesOnly[0]);
+  }, [expensesOnly]);
+
   const avgExpense = expensesOnly.length > 0 ? Math.round(summary.totalExpenses / expensesOnly.length) : 0;
 
   return (
-    <div className="min-h-screen bg-[#060913] text-slate-100 flex">
+    <div className="min-h-screen bg-[#F7F6F0] text-[#1D2923]">
       <DashboardSidebar />
 
-      <main className="flex-1 lg:pl-64 pt-16 lg:pt-0 min-h-screen flex flex-col">
-        {/* Header */}
-        <header className="px-6 lg:px-10 py-6 border-b border-slate-800/80 bg-[#080d1e]/80 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-0 z-20">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                ANALYTICS
-              </span>
-              <span className="text-xs text-slate-400">• Financial Intelligence Reports</span>
-            </div>
-            <h1 className="text-2xl font-black tracking-tight text-white mt-1">
-              Financial Reports & Trends
-            </h1>
-            <p className="text-xs text-slate-400">
-              Granular analytics, category velocity, and historical cash flow trends
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 font-mono">
-            <Calendar className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Cycle: September 2026</span>
-          </div>
-        </header>
-
-        {/* Content */}
-        <div className="p-6 lg:p-10 space-y-6">
-          {/* Top Monthly Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-5 rounded-2xl bg-[#0c1222] border border-slate-800 shadow-lg">
-              <span className="text-xs text-slate-400 font-medium">Total Income</span>
-              <div className="text-2xl font-black text-emerald-400 mt-1">
-                {formatINR(summary.totalIncome)}
-              </div>
-              <p className="text-[11px] text-slate-400 mt-1">Primary salary credits</p>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-[#0c1222] border border-slate-800 shadow-lg">
-              <span className="text-xs text-slate-400 font-medium">Total Expenses</span>
-              <div className="text-2xl font-black text-rose-400 mt-1">
-                {formatINR(summary.totalExpenses)}
-              </div>
-              <p className="text-[11px] text-slate-400 mt-1">10 logged transactions</p>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-[#0c1222] border border-slate-800 shadow-lg">
-              <span className="text-xs text-slate-400 font-medium">Net Savings</span>
-              <div className="text-2xl font-black text-cyan-300 mt-1">
-                {formatINR(summary.currentBalance)}
-              </div>
-              <p className="text-[11px] text-slate-400 mt-1">Retained liquid capital</p>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-[#0c1222] border border-slate-800 shadow-lg">
-              <span className="text-xs text-slate-400 font-medium">Savings Rate</span>
-              <div className="text-2xl font-black text-indigo-300 mt-1">
-                {summary.savingsRate}%
-              </div>
-              <p className="text-[11px] text-emerald-400 font-semibold mt-1">
-                Surpasses 20% benchmark
-              </p>
-            </div>
-          </div>
-
-          {/* Human Readable Insights Callout (Section 10) */}
-          <div className="p-5 rounded-2xl bg-gradient-to-r from-cyan-950/40 via-indigo-950/40 to-slate-900 border border-cyan-500/30 flex items-start gap-4">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
-              <Sparkles className="w-5 h-5" />
-            </div>
+      <main className="lg:pl-64 pt-14 lg:pt-0 pb-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#E6E5DC]">
             <div>
-              <h4 className="text-sm font-bold text-white">Finora Algorithmic Insight</h4>
-              <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                {largestTx ? (
-                  <>
-                    &ldquo;<strong>{highestCat[0]}</strong> accounts for{' '}
-                    <strong>{highestCatPct}%</strong> of your expenses this month (
-                    {formatINR(Number(highestCat[1]))}). Your largest single expense was{' '}
-                    <strong>{largestTx.description}</strong> ({formatINR(largestTx.amount)}). Average
-                    ticket size per transaction is {formatINR(avgExpense)}.&rdquo;
-                  </>
-                ) : (
-                  <>No expenses recorded yet. Once you add transactions, Finora will automatically analyze highest categories, ticket sizes, and spending distributions.</>
-                )}
+              <h1 className="font-serif text-3xl font-normal text-[#1D2923] tracking-tight">
+                Financial Reports
+              </h1>
+              <p className="text-sm text-[#777E77] mt-1 font-sans">
+                Analytical trends, monthly cash flow comparison and category distribution
               </p>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-[#FFFFFF] border border-[#E6E5DC] rounded-lg text-xs font-mono text-[#777E77] shadow-subtle">
+              <Calendar className="w-3.5 h-3.5 text-[#244C3B]" strokeWidth={1.75} />
+              <span>All Logged Periods</span>
             </div>
           </div>
 
-          {/* Cashflow & Expense Distribution Histogram */}
-          <div className="p-6 rounded-2xl bg-[#0c1222] border border-slate-800 shadow-xl space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          {/* Key Metric Highlights */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-[#FFFFFF] border border-[#E6E5DC] rounded-xl p-5 shadow-subtle">
+              <span className="text-xs text-[#777E77] block">Total Inflow</span>
+              <p className="text-2xl font-mono font-medium text-[#39845B] mt-2 tabular-nums">
+                +{formatINR(summary.totalIncome)}
+              </p>
+              <span className="text-[11px] text-[#777E77] mt-1 block">Cumulative credits</span>
+            </div>
+
+            <div className="bg-[#FFFFFF] border border-[#E6E5DC] rounded-xl p-5 shadow-subtle">
+              <span className="text-xs text-[#777E77] block">Total Outflow</span>
+              <p className="text-2xl font-mono font-medium text-[#DB896B] mt-2 tabular-nums">
+                -{formatINR(summary.totalExpenses)}
+              </p>
+              <span className="text-[11px] text-[#777E77] mt-1 block">
+                {expensesOnly.length} recorded debits
+              </span>
+            </div>
+
+            <div className="bg-[#FFFFFF] border border-[#E6E5DC] rounded-xl p-5 shadow-subtle">
+              <span className="text-xs text-[#777E77] block">Net Savings Rate</span>
+              <p className="text-2xl font-mono font-medium text-[#244C3B] mt-2 tabular-nums">
+                {summary.savingsRate}%
+              </p>
+              <span className="text-[11px] text-[#777E77] mt-1 block">
+                {formatINR(Math.max(0, summary.totalIncome - summary.totalExpenses))} retained
+              </span>
+            </div>
+
+            <div className="bg-[#FFFFFF] border border-[#E6E5DC] rounded-xl p-5 shadow-subtle">
+              <span className="text-xs text-[#777E77] block">Average Expense</span>
+              <p className="text-2xl font-mono font-medium text-[#1D2923] mt-2 tabular-nums">
+                {formatINR(avgExpense)}
+              </p>
+              <span className="text-[11px] text-[#777E77] mt-1 block">Per recorded transaction</span>
+            </div>
+          </div>
+
+          {/* Cash Flow History Chart */}
+          <div className="bg-[#FFFFFF] border border-[#E6E5DC] rounded-xl p-6 shadow-subtle space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5 text-cyan-400" />
-                  <h3 className="text-base font-bold text-white">Financial Distribution Histogram</h3>
+                <h3 className="font-serif text-lg font-normal text-[#1D2923]">
+                  Monthly Cash Flow Trends
+                </h3>
+                <p className="text-xs text-[#777E77] mt-0.5">
+                  Historical comparison of income, expenses, and retained savings
+                </p>
+              </div>
+              <div className="flex items-center gap-4 text-xs">
+                <span className="flex items-center gap-1.5 text-[#777E77]">
+                  <span className="w-2.5 h-2.5 rounded-xs bg-[#39845B]" />
+                  Income
+                </span>
+                <span className="flex items-center gap-1.5 text-[#777E77]">
+                  <span className="w-2.5 h-2.5 rounded-xs bg-[#DB896B]" />
+                  Expense
+                </span>
+                <span className="flex items-center gap-1.5 text-[#777E77]">
+                  <span className="w-2.5 h-2.5 rounded-xs bg-[#244C3B]" />
+                  Savings
+                </span>
+              </div>
+            </div>
+
+            <div className="h-72 w-full pt-4">
+              {mounted && trendData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={trendData} barGap={4}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E6E5DC" vertical={false} />
+                    <XAxis
+                      dataKey="month"
+                      stroke="#777E77"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={{ stroke: '#E6E5DC' }}
+                    />
+                    <YAxis
+                      stroke="#777E77"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v) => `₹${v >= 1000 ? `${Math.round(v / 1000)}k` : v}`}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#FFFFFF',
+                        borderColor: '#E6E5DC',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        color: '#1D2923',
+                      }}
+                      formatter={(val: any) => [formatINR(Number(val)), '']}
+                    />
+                    <Bar dataKey="Income" fill="#39845B" radius={[3, 3, 0, 0]} maxBarSize={24} />
+                    <Bar dataKey="Expenses" fill="#DB896B" radius={[3, 3, 0, 0]} maxBarSize={24} />
+                    <Bar dataKey="Savings" fill="#244C3B" radius={[3, 3, 0, 0]} maxBarSize={24} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-center p-6">
+                  <Inbox className="w-8 h-8 text-[#9A9F98] stroke-1 mb-2" />
+                  <p className="text-xs text-[#777E77]">No historical cash flow records available yet.</p>
                 </div>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Clear, easy-to-read vertical frequency distribution of your money
+              )}
+            </div>
+          </div>
+
+          {/* Two Columns: Category Breakdown & Financial Insights */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Category Breakdown Table */}
+            <div className="bg-[#FFFFFF] border border-[#E6E5DC] rounded-xl p-6 shadow-subtle space-y-4">
+              <div>
+                <h3 className="font-serif text-lg font-normal text-[#1D2923]">
+                  Category Breakdown
+                </h3>
+                <p className="text-xs text-[#777E77] mt-0.5">
+                  Proportion of total expenditure by category
                 </p>
               </div>
 
-              {/* Histogram Mode Toggle */}
-              <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-900 border border-slate-800 self-start sm:self-auto">
-                <button
-                  onClick={() => setHistogramMode('cashflow')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-all ${
-                    histogramMode === 'cashflow'
-                      ? 'bg-gradient-to-r from-cyan-500 to-indigo-600 text-white shadow-md'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Monthly Cashflow
-                </button>
-                <button
-                  onClick={() => setHistogramMode('bins')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-all ${
-                    histogramMode === 'bins'
-                      ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Expense Size Bins
-                </button>
-              </div>
+              {sortedCategories.length > 0 ? (
+                <div className="space-y-3 pt-2">
+                  {sortedCategories.map(([cat, amount]) => {
+                    const pct = summary.totalExpenses > 0 ? Math.round((amount / summary.totalExpenses) * 100) : 0;
+                    return (
+                      <div key={cat} className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-medium text-[#1D2923]">{cat}</span>
+                          <span className="font-mono text-[#777E77] tabular-nums">
+                            {formatINR(amount)} ({pct}%)
+                          </span>
+                        </div>
+                        <div className="w-full h-1.5 rounded-full bg-[#F0F1E9] overflow-hidden">
+                          <div
+                            className="h-full bg-[#466B56] rounded-full transition-all duration-300"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-8 text-center text-xs text-[#777E77]">
+                  No expense records to analyze.
+                </div>
+              )}
             </div>
 
-            {/* Legend Indicators */}
-            {histogramMode === 'cashflow' ? (
-              <div className="flex flex-wrap items-center gap-4 text-xs font-mono pt-1">
-                <span className="flex items-center gap-1.5 text-emerald-400">
-                  <span className="w-3 h-3 rounded-md bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-                  Income (Inflow)
-                </span>
-                <span className="flex items-center gap-1.5 text-rose-400">
-                  <span className="w-3 h-3 rounded-md bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]" />
-                  Expenses (Outflow)
-                </span>
-                <span className="flex items-center gap-1.5 text-cyan-400">
-                  <span className="w-3 h-3 rounded-md bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.4)]" />
-                  Net Savings Retained
-                </span>
-              </div>
-            ) : (
-              <div className="flex flex-wrap items-center gap-3 text-xs font-mono pt-1">
-                {expenseBins.map((bin) => (
-                  <span key={bin.range} className="flex items-center gap-1.5 text-slate-300">
-                    <span className="w-3 h-3 rounded-md" style={{ backgroundColor: bin.color }} />
-                    <span>{bin.label}:</span>
-                    <span className="font-bold text-white">{bin.count} txns</span>
-                  </span>
-                ))}
-              </div>
-            )}
+            {/* Financial Highlights */}
+            <div className="bg-[#FFFFFF] border border-[#E6E5DC] rounded-xl p-6 shadow-subtle space-y-4 flex flex-col justify-between">
+              <div>
+                <h3 className="font-serif text-lg font-normal text-[#1D2923]">
+                  Analytical Summary
+                </h3>
+                <p className="text-xs text-[#777E77] mt-0.5">
+                  Key observations from your transaction records
+                </p>
 
-            {/* Histogram Viewport */}
-            <div className="h-80 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                {histogramMode === 'cashflow' ? (
-                  <BarChart data={trendData} margin={{ top: 15, right: 25, left: 10, bottom: 5 }} barGap={6}>
-                    <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" vertical={false} />
-                    <XAxis
-                      dataKey="month"
-                      stroke="#64748b"
-                      tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 600 }}
-                    />
-                    <YAxis
-                      stroke="#64748b"
-                      tick={{ fill: '#94a3b8', fontSize: 11 }}
-                      tickFormatter={(val) => `₹${(val / 1000).toFixed(0)}k`}
-                    />
-                    <Tooltip
-                      cursor={{ fill: 'rgba(6, 182, 212, 0.06)', stroke: 'rgba(56, 189, 248, 0.2)', strokeWidth: 1, rx: 8 }}
-                      contentStyle={{
-                        backgroundColor: '#090e1f',
-                        borderColor: '#38bdf8',
-                        borderRadius: '12px',
-                        color: '#ffffff',
-                        fontSize: '12px',
-                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 0 15px rgba(6, 182, 212, 0.25)',
-                      }}
-                      itemStyle={{ color: '#ffffff', fontWeight: 600 }}
-                      labelStyle={{ color: '#ffffff', fontWeight: 800, marginBottom: '4px' }}
-                      formatter={(val: any, name: string) => [
-                        <span key={name} className="font-mono text-cyan-300 font-bold">{formatINR(Number(val))}</span>,
-                        <span key={`${name}-label`} className="text-slate-300 capitalize">{name}</span>
-                      ]}
-                    />
-                    <Bar
-                      dataKey="Income"
-                      fill="#10b981"
-                      radius={[6, 6, 0, 0]}
-                      maxBarSize={28}
-                      activeBar={{ fill: '#059669', stroke: '#34d399', strokeWidth: 1 }}
-                    />
-                    <Bar
-                      dataKey="Expenses"
-                      fill="#f43f5e"
-                      radius={[6, 6, 0, 0]}
-                      maxBarSize={28}
-                      activeBar={{ fill: '#e11d48', stroke: '#fb7185', strokeWidth: 1 }}
-                    />
-                    <Bar
-                      dataKey="Savings"
-                      fill="#06b6d4"
-                      radius={[6, 6, 0, 0]}
-                      maxBarSize={28}
-                      activeBar={{ fill: '#0891b2', stroke: '#22d3ee', strokeWidth: 1 }}
-                    />
-                  </BarChart>
-                ) : (
-                  <BarChart data={expenseBins} margin={{ top: 15, right: 25, left: 10, bottom: 5 }}>
-                    <CartesianGrid stroke="#1e293b" strokeDasharray="3 3" vertical={false} />
-                    <XAxis
-                      dataKey="range"
-                      stroke="#64748b"
-                      tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 600 }}
-                    />
-                    <YAxis
-                      stroke="#64748b"
-                      tick={{ fill: '#94a3b8', fontSize: 11 }}
-                      tickFormatter={(val) => `${val} txns`}
-                    />
-                    <Tooltip
-                      cursor={{ fill: 'rgba(139, 92, 246, 0.08)', stroke: 'rgba(167, 139, 250, 0.2)', strokeWidth: 1, rx: 8 }}
-                      contentStyle={{
-                        backgroundColor: '#090e1f',
-                        borderColor: '#8b5cf6',
-                        borderRadius: '12px',
-                        color: '#ffffff',
-                        fontSize: '12px',
-                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 0 15px rgba(139, 92, 246, 0.25)',
-                      }}
-                      itemStyle={{ color: '#ffffff', fontWeight: 600 }}
-                      labelStyle={{ color: '#ffffff', fontWeight: 800 }}
-                      formatter={(val: any, name: string, item: any) => [
-                        <span key="val" className="font-mono text-cyan-300 font-bold">
-                          {item.payload.count} transactions ({formatINR(item.payload.total)})
-                        </span>,
-                        'Volume'
-                      ]}
-                    />
-                    <Bar
-                      dataKey="count"
-                      radius={[8, 8, 0, 0]}
-                      maxBarSize={55}
-                      activeBar={{ opacity: 0.85 }}
-                    >
-                      {expenseBins.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                )}
-              </ResponsiveContainer>
-            </div>
+                <div className="mt-4 space-y-3">
+                  <div className="p-3.5 bg-[#F0F1E9] rounded-lg border border-[#E6E5DC]">
+                    <span className="text-[11px] text-[#777E77] block">Primary Expense Category</span>
+                    <span className="text-sm font-medium text-[#1D2923] mt-0.5 block">
+                      {topCategory[0]} ({topCategoryPct}% of total outgoings)
+                    </span>
+                  </div>
 
-            {/* Beginner-Friendly Explainer Banner */}
-            <div className="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs flex items-center justify-between gap-4 text-slate-300">
-              <div className="flex items-center gap-2">
-                <Info className="w-4 h-4 text-cyan-400 shrink-0" />
-                <span>
-                  <strong>Why a Histogram?</strong> Clear vertical blocks let you compare income vs expenses at a glance without reading confusing curve lines.
-                </span>
+                  {largestExpense && (
+                    <div className="p-3.5 bg-[#F0F1E9] rounded-lg border border-[#E6E5DC]">
+                      <span className="text-[11px] text-[#777E77] block">Largest Individual Expense</span>
+                      <span className="text-sm font-medium text-[#1D2923] mt-0.5 block">
+                        {largestExpense.description} — <span className="font-mono">{formatINR(largestExpense.amount)}</span>
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="p-3.5 bg-[#F0F1E9] rounded-lg border border-[#E6E5DC]">
+                    <span className="text-[11px] text-[#777E77] block">Cash Reserve Status</span>
+                    <span className="text-sm font-medium text-[#1D2923] mt-0.5 block">
+                      {summary.currentBalance >= 0
+                        ? `Net positive balance of ${formatINR(summary.currentBalance)}`
+                        : `Deficit of ${formatINR(Math.abs(summary.currentBalance))}`}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="hidden md:flex items-center gap-3 font-mono text-[11px] shrink-0 text-slate-400">
-                <span>Avg Income: <strong className="text-emerald-400">₹88.3k</strong></span>
-                <span>Avg Spend: <strong className="text-rose-400">₹16.6k</strong></span>
+
+              <div className="pt-4 border-t border-[#E6E5DC] text-[11px] text-[#777E77]">
+                Calculated strictly from your database ledger entries.
               </div>
             </div>
           </div>

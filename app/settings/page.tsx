@@ -3,43 +3,63 @@
 import React, { useState, useEffect } from 'react';
 import DashboardSidebar from '@/components/DashboardSidebar';
 import { db } from '@/lib/db';
-import { createBrowserClient } from '@supabase/ssr';
+import { createClient } from '@/lib/supabase/client';
 import {
   Settings as SettingsIcon,
   Database,
-  Key,
-  Shield,
-  RotateCcw,
-  Trash2,
   Download,
   Check,
-  User,
-  ExternalLink,
-  Layers,
-  LogOut
+  UserRound,
+  ShieldCheck,
+  LogOut,
+  AlertCircle
 } from 'lucide-react';
 
 export default function SettingsPage() {
-  const [cleared, setCleared] = useState(false);
-  const [resetDone, setResetDone] = useState(false);
   const [exportDone, setExportDone] = useState(false);
-  const [isSupabaseConfigured, setIsSupabaseConfigured] = useState(false);
   const [userEmail, setUserEmail] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [monthlyIncome, setMonthlyIncome] = useState('');
+  const [isSaved, setIsSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
-    // Check if Supabase is configured
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
-    const configured = !!(url && key && !url.includes('placeholder') && !key.includes('placeholder'));
-    setIsSupabaseConfigured(configured);
-
-    if (configured) {
-      const supabase = createBrowserClient(url, key);
-      supabase.auth.getUser().then(({ data }) => {
-        setUserEmail(data.user?.email ?? '');
+    const supabase = createClient();
+    if (supabase) {
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user) {
+          setUserEmail(user.email ?? '');
+          setFullName(user.user_metadata?.full_name ?? '');
+        }
       });
     }
+
+    db.userProfile.get().then((profile) => {
+      if (profile) {
+        if (profile.full_name) setFullName(profile.full_name);
+        if (profile.monthly_income) setMonthlyIncome(String(profile.monthly_income));
+      }
+    }).catch(() => {});
   }, []);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setErrorMsg('');
+    try {
+      await db.userProfile.update({
+        full_name: fullName.trim() || null,
+        monthly_income: monthlyIncome ? parseFloat(monthlyIncome) : 0,
+      });
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 2500);
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? 'Failed to update preferences.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleExportBackup = async () => {
     try {
@@ -50,12 +70,19 @@ export default function SettingsPage() {
         db.bills.list(),
         db.investments.list(),
       ]);
-      const backup = { transactions, budgets, goals, bills, investments, exportedAt: new Date().toISOString() };
+      const backup = {
+        transactions,
+        budgets,
+        goals,
+        bills,
+        investments,
+        exportedAt: new Date().toISOString(),
+      };
       const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Finora_Full_Backup_${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `Finora_Data_Export_${new Date().toISOString().split('T')[0]}.json`;
       a.click();
       setExportDone(true);
       setTimeout(() => setExportDone(false), 2500);
@@ -65,109 +92,191 @@ export default function SettingsPage() {
   };
 
   const handleSignOut = async () => {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
-    if (url && key) {
-      const supabase = createBrowserClient(url, key);
+    const supabase = createClient();
+    if (supabase) {
       await supabase.auth.signOut();
     }
-    window.location.href = '/';
+    window.location.href = '/login';
   };
 
   return (
-    <div className="min-h-screen bg-[#060913] text-slate-100 flex">
+    <div className="min-h-screen bg-[#F7F6F0] text-[#1D2923]">
       <DashboardSidebar />
 
-      <main className="flex-1 lg:pl-64 pt-16 lg:pt-0 min-h-screen flex flex-col">
-        {/* Header */}
-        <header className="px-6 lg:px-10 py-6 border-b border-slate-800/80 bg-[#080d1e]/80 backdrop-blur-md sticky top-0 z-20">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
-              CONFIG
-            </span>
-            <span className="text-xs text-slate-400">• System & Integrations</span>
-          </div>
-          <h1 className="text-2xl font-black tracking-tight text-white mt-1">Settings</h1>
-          <p className="text-xs text-slate-400">
-            Manage your currency formatting, Supabase PostgreSQL sync, and local data persistence
-          </p>
-        </header>
-
-        {/* Content */}
-        <div className="p-6 lg:p-10 space-y-8 max-w-4xl">
-          {/* Currency Configuration (Section 34) */}
-          <div className="p-6 rounded-2xl bg-[#0c1222] border border-slate-800 shadow-xl space-y-3">
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-cyan-400" />
-              Currency Localization (Section 34)
-            </h3>
-            <p className="text-xs text-slate-400">
-              Finora defaults to Indian Numbering System (₹ Lakhs & Crores format) across all ledgers,
-              graphs, predictions, and conversational AI responses.
+      <main className="lg:pl-64 pt-14 lg:pt-0 pb-16">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+          {/* Header */}
+          <div className="pb-6 border-b border-[#E6E5DC]">
+            <h1 className="font-serif text-3xl font-normal text-[#1D2923] tracking-tight">
+              Settings & Preferences
+            </h1>
+            <p className="text-sm text-[#777E77] mt-1 font-sans">
+              Account parameters, baseline income configuration and data management
             </p>
-            <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between text-xs">
-              <div>
-                <span className="font-semibold text-white">Active Currency:</span>
-                <span className="ml-2 font-mono text-cyan-300 font-bold">Indian Rupee (INR - ₹)</span>
-              </div>
-              <span className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 text-[10px] font-mono border border-cyan-500/30">
-                ACTIVE
-              </span>
-            </div>
           </div>
 
-          {/* Database & Supabase Status (Section 4 & 35) */}
-          <div className="p-6 rounded-2xl bg-[#0c1222] border border-slate-800 shadow-xl space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Database className="w-4 h-4 text-cyan-400" />
-                <span>Supabase PostgreSQL & RLS Integration</span>
+          {errorMsg && (
+            <div className="p-4 bg-[#C76B63]/10 border border-[#C76B63]/30 rounded-xl text-[#C76B63] text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" strokeWidth={1.75} />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          {/* Profile Section */}
+          <div className="bg-[#FFFFFF] border border-[#E6E5DC] rounded-xl p-6 shadow-subtle space-y-5">
+            <div>
+              <h3 className="font-serif text-lg font-normal text-[#1D2923]">
+                Account Profile
               </h3>
-              <span
-                className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
-                  isSupabaseConfigured
-                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                    : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                }`}
-              >
-                {isSupabaseConfigured ? 'CONNECTED' : 'STANDALONE / DEMO MODE'}
-              </span>
+              <p className="text-xs text-[#777E77] mt-0.5">
+                Manage your identity and expected monthly income baseline
+              </p>
             </div>
 
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Finora includes the complete PostgreSQL schema with Row-Level Security (`auth.uid() = user_id`) in `supabase/schema.sql`. In Standalone/Demo mode, all actions reactively persist in your browser session with zero friction.
-            </p>
+            <form onSubmit={handleSaveProfile} className="space-y-4 max-w-lg">
+              <div>
+                <label className="block text-xs font-medium text-[#777E77] mb-1.5">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={userEmail}
+                  disabled
+                  className="w-full px-3.5 py-2.5 bg-[#F0F1E9] border border-[#E6E5DC] rounded-lg text-xs font-mono text-[#777E77] cursor-not-allowed"
+                />
+              </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 font-mono text-[11px] text-slate-300 space-y-1">
-              <div>NEXT_PUBLIC_SUPABASE_URL = {isSupabaseConfigured ? '••••••••••••' : 'Not configured'}</div>
-              <div>NEXT_PUBLIC_SUPABASE_ANON_KEY = {isSupabaseConfigured ? '••••••••••••••••' : 'Not configured'}</div>
-              {userEmail && <div className="text-cyan-400 mt-1">Signed in as: {userEmail}</div>}
+              <div>
+                <label className="block text-xs font-medium text-[#777E77] mb-1.5">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Your full name"
+                  className="w-full px-3.5 py-2.5 bg-[#FFFFFF] border border-[#E6E5DC] rounded-lg text-xs text-[#1D2923] focus:border-[#244C3B] focus:ring-1 focus:ring-[#244C3B] outline-none transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[#777E77] mb-1.5">
+                  Expected Monthly Income (INR)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-mono text-[#777E77]">
+                    ₹
+                  </span>
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={monthlyIncome}
+                    onChange={(e) => setMonthlyIncome(e.target.value)}
+                    placeholder="e.g. 100000"
+                    className="w-full pl-8 pr-3.5 py-2.5 bg-[#FFFFFF] border border-[#E6E5DC] rounded-lg text-xs font-mono text-[#1D2923] focus:border-[#244C3B] focus:ring-1 focus:ring-[#244C3B] outline-none transition-all"
+                  />
+                </div>
+                <span className="text-[11px] text-[#9A9F98] mt-1 block">
+                  Used by Finora AI and budgeting models to calculate savings benchmarks.
+                </span>
+              </div>
+
+              <div className="pt-2 flex items-center gap-3">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-4 py-2 bg-[#244C3B] hover:bg-[#1D3D30] text-white text-xs font-medium rounded-lg transition-colors shadow-subtle disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save Profile'}
+                </button>
+                {isSaved && (
+                  <span className="text-xs font-medium text-[#39845B] flex items-center gap-1">
+                    <Check className="w-3.5 h-3.5" strokeWidth={1.75} />
+                    Saved successfully
+                  </span>
+                )}
+              </div>
+            </form>
+          </div>
+
+          {/* Localization & Currency */}
+          <div className="bg-[#FFFFFF] border border-[#E6E5DC] rounded-xl p-6 shadow-subtle space-y-4">
+            <div>
+              <h3 className="font-serif text-lg font-normal text-[#1D2923]">
+                Currency Localization
+              </h3>
+              <p className="text-xs text-[#777E77] mt-0.5">
+                Finora is formatted for the Indian Numbering System across all modules
+              </p>
+            </div>
+
+            <div className="p-3.5 bg-[#F0F1E9] border border-[#E6E5DC] rounded-lg flex items-center justify-between text-xs">
+              <div>
+                <span className="font-medium text-[#1D2923]">Standard Currency:</span>
+                <span className="ml-2 font-mono text-[#244C3B] font-medium">Indian Rupee (INR — ₹)</span>
+              </div>
+              <span className="px-2 py-0.5 rounded-full bg-[#E5EBDD] text-[#244C3B] text-[10px] font-medium">
+                Active
+              </span>
             </div>
           </div>
 
-          <div className="p-6 rounded-2xl bg-[#0c1222] border border-slate-800 shadow-xl space-y-4">
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <Layers className="w-4 h-4 text-cyan-400" />
-              <span>Data Management</span>
-            </h3>
-            <p className="text-xs text-slate-400">
-              Export a full JSON backup of all your Finora financial records from Supabase.
+          {/* Database Integration Status */}
+          <div className="bg-[#FFFFFF] border border-[#E6E5DC] rounded-xl p-6 shadow-subtle space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-serif text-lg font-normal text-[#1D2923]">
+                  Supabase Security & Database Sync
+                </h3>
+                <p className="text-xs text-[#777E77] mt-0.5">
+                  PostgreSQL database with Row-Level Security (RLS) enforcement
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#E5EBDD] text-[#39845B] text-xs font-medium">
+                <ShieldCheck className="w-3.5 h-3.5" strokeWidth={1.75} />
+                RLS Active
+              </span>
+            </div>
+            <p className="text-xs text-[#777E77] leading-relaxed">
+              Every database query verifies your authenticated user ID before read or write execution. Financial data remains isolated to your account.
             </p>
+          </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+          {/* Data Export & Sign Out */}
+          <div className="bg-[#FFFFFF] border border-[#E6E5DC] rounded-xl p-6 shadow-subtle space-y-4">
+            <div>
+              <h3 className="font-serif text-lg font-normal text-[#1D2923]">
+                Data Management & Session
+              </h3>
+              <p className="text-xs text-[#777E77] mt-0.5">
+                Download a clean JSON archive of your records or terminate your session
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
               <button
                 onClick={handleExportBackup}
-                className="p-3 rounded-xl bg-slate-900 border border-slate-700 hover:border-cyan-500 text-xs font-semibold text-slate-200 hover:text-white flex items-center justify-center gap-2 transition-all"
+                className="w-full sm:w-auto px-4 py-2 bg-[#F0F1E9] hover:bg-[#E6E5DC] border border-[#E6E5DC] text-[#1D2923] text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
               >
-                {exportDone ? <Check className="w-4 h-4 text-emerald-400" /> : <Download className="w-4 h-4 text-indigo-400" />}
-                <span>{exportDone ? 'Download started!' : 'Export All Data (JSON)'}</span>
+                {exportDone ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-[#39845B]" strokeWidth={1.75} />
+                    <span>Download Started</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-3.5 h-3.5 text-[#777E77]" strokeWidth={1.75} />
+                    <span>Export Full Data (JSON)</span>
+                  </>
+                )}
               </button>
 
               <button
                 onClick={handleSignOut}
-                className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 text-xs font-semibold text-rose-300 flex items-center justify-center gap-2 transition-all"
+                className="w-full sm:w-auto px-4 py-2 bg-[#C76B63]/10 hover:bg-[#C76B63]/20 border border-[#C76B63]/30 text-[#C76B63] text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
               >
-                <LogOut className="w-4 h-4 text-rose-400" />
+                <LogOut className="w-3.5 h-3.5" strokeWidth={1.75} />
                 <span>Sign Out</span>
               </button>
             </div>
