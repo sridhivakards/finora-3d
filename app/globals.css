@@ -27,17 +27,40 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Typography Rules */
-h1, h2, h3, h4, h5, h6 {
+/* 1. TYPOGRAPHY SYSTEM */
+h1, h2, h3, h4, h5, h6,
+.font-serif,
+.font-black,
+.font-extrabold {
   font-family: 'DM Serif Display', Georgia, serif;
 }
 
-.font-mono, [class*="font-mono"], .tabular-nums, [class*="tabular-nums"] {
+body,
+p,
+span,
+a,
+button,
+label,
+input,
+select,
+textarea,
+.font-sans {
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.font-mono,
+[class*="font-mono"],
+.tabular-nums,
+[class*="tabular-nums"],
+td.font-mono,
+span.font-mono,
+div.font-mono {
   font-family: 'IBM Plex Mono', Menlo, Consolas, monospace !important;
   font-variant-numeric: tabular-nums;
 }
 
-/* Base backgrounds mapped to Main background (#F7F6F0) */
+/* 2. BACKGROUNDS & SURFACES */
+/* Primary background: #F7F6F0 */
 .bg-\[\#060913\],
 .bg-\[\#060913\]\/85,
 .bg-\[\#080d1e\],
@@ -47,7 +70,7 @@ h1, h2, h3, h4, h5, h6 {
   background-color: #F7F6F0 !important;
 }
 
-/* Card surfaces mapped to Card background (#FFFFFF) */
+/* White surface: #FFFFFF */
 .bg-\[\#0c1222\],
 .bg-\[\#0c1222\]\/90,
 .bg-\[\#0c1222\]\/80,
@@ -57,7 +80,7 @@ h1, h2, h3, h4, h5, h6 {
   border-color: #E6E5DC !important;
 }
 
-/* Secondary surfaces mapped to Secondary background (#F0F1E9) */
+/* Secondary background: #F0F1E9 */
 .bg-slate-900,
 .bg-slate-900\/90,
 .bg-slate-900\/80,
@@ -70,7 +93,7 @@ h1, h2, h3, h4, h5, h6 {
   border-color: #E6E5DC !important;
 }
 
-/* Selected navigation / pill backgrounds mapped to Light Sage (#E5EBDD) */
+/* Light sage: #E5EBDD for selected navigation, tags and highlights */
 .bg-slate-800,
 .bg-slate-800\/80,
 .bg-slate-800\/60,
@@ -82,7 +105,101 @@ h1, h2, h3, h4, h5, h6 {
   border-color: #CBD4C7 !important;
 }
 
-/* Form input backgrounds */
+/* 3. BORDERS: #E6E5DC */
+.border-slate-800,
+.border-slate-800\/80,
+.border-slate-800\/60,
+.border-slate-700,
+.border-slate-700\/80,
+.border-white\/10,
+.border-white\/5 {
+  border-color: #E6E5DC !important;
+}
+
+/* 4. TEXT COLORS */
+/* Primary text: #1D2923 */
+.text-white,
+.text-slate-100,
+.text-slate-200 {
+  color: #1D2923;
+}
+
+/* Secondary text: #777E77 */
+.text-slate-300,
+.text-slate-400,
+.text-slate-500 {
+  color: #777E77 !important;
+}
+
+.text-slate-600,
+.text-slate-700 {
+  color: #9A9F98 !important;
+}
+
+/* Deep olive: #244C3B */
+.text-cyan-400,
+.text-cyan-300 {
+  color: #244C3B !important;
+}
+
+/* Forest green / Sage accents */
+.text-violet-400,
+.text-indigo-400 {
+  color: #466B56 !important;
+}
+
+/* Income: #39845B */
+.text-emerald-400,
+.text-emerald-300 {
+  color: #39845B !important;
+}
+
+.bg-emerald-500\/10,
+.bg-emerald-500\/15,
+.bg-emerald-500\/20 {
+  background-color: rgba(57, 132, 91, 0.12) !important;
+  color: #39845B !important;
+  border-color: rgba(57, 132, 91, 0.3) !important;
+}
+
+/* Expenses: #DB896B */
+.text-rose-400,
+.text-rose-300 {
+  color: #DB896B !important;
+}
+
+.bg-rose-500\/10,
+.bg-rose-500\/15,
+.bg-rose-500\/20 {
+  background-color: rgba(219, 137, 107, 0.12) !important;
+  color: #DB896B !important;
+  border-color: rgba(219, 137, 107, 0.3) !important;
+}
+
+/* 5. BUTTONS: Deep Olive (#244C3B) with crisp white text */
+button.bg-cyan-500,
+.bg-gradient-to-r.from-cyan-500,
+.bg-gradient-to-tr.from-cyan-500 {
+  background-image: none !important;
+  background-color: #244C3B !important;
+  color: #FFFFFF !important;
+}
+
+button.bg-cyan-500:hover,
+.bg-gradient-to-r.from-cyan-500:hover,
+.bg-gradient-to-tr.from-cyan-500:hover {
+  background-color: #1D3D30 !important;
+}
+
+/* Ensure text inside olive buttons is white */
+button.bg-cyan-500 *,
+.bg-gradient-to-r.from-cyan-500 *,
+.bg-gradient-to-tr.from-cyan-500 *,
+.bg-\[\#244C3B\] * {
+  color: #FFFFFF !important;
+}
+
+/* 6. FORM INPUTS */
 input:not([type="checkbox"]):not([type="radio"]),
 select,
 textarea {
@@ -98,87 +215,7 @@ textarea:focus {
   outline: none !important;
 }
 
-/* Text Colors */
-.text-white,
-.text-slate-100,
-.text-slate-200 {
-  color: #1D2923 !important;
-}
-
-.text-slate-300,
-.text-slate-400,
-.text-slate-500 {
-  color: #777E77 !important;
-}
-
-.text-slate-600,
-.text-slate-700 {
-  color: #9A9F98 !important;
-}
-
-/* Border Colors */
-.border-slate-800,
-.border-slate-800\/80,
-.border-slate-800\/60,
-.border-slate-700,
-.border-slate-700\/80,
-.border-white\/10,
-.border-white\/5 {
-  border-color: #E6E5DC !important;
-}
-
-/* Accents: Olive, Sage, Income (#39845B), Expense (#DB896B) */
-.text-cyan-400,
-.text-cyan-300 {
-  color: #244C3B !important;
-}
-
-.text-emerald-400,
-.text-emerald-300 {
-  color: #39845B !important;
-}
-
-.text-rose-400,
-.text-rose-300 {
-  color: #DB896B !important;
-}
-
-.text-violet-400,
-.text-indigo-400 {
-  color: #466B56 !important;
-}
-
-.bg-emerald-500\/10,
-.bg-emerald-500\/15,
-.bg-emerald-500\/20 {
-  background-color: rgba(57, 132, 91, 0.12) !important;
-  color: #39845B !important;
-  border-color: rgba(57, 132, 91, 0.3) !important;
-}
-
-.bg-rose-500\/10,
-.bg-rose-500\/15,
-.bg-rose-500\/20 {
-  background-color: rgba(219, 137, 107, 0.12) !important;
-  color: #DB896B !important;
-  border-color: rgba(219, 137, 107, 0.3) !important;
-}
-
-/* Buttons */
-button.bg-cyan-500,
-.bg-gradient-to-r.from-cyan-500,
-.bg-gradient-to-tr.from-cyan-500 {
-  background-image: none !important;
-  background-color: #244C3B !important;
-  color: #FFFFFF !important;
-}
-
-button.bg-cyan-500:hover,
-.bg-gradient-to-r.from-cyan-500:hover {
-  background-color: #1D3D30 !important;
-}
-
-/* Remove decorative shadows, neon glows, and excessive blurs */
+/* 7. REMOVAL OF UNNECESSARY DECORATIVE EFFECTS */
 .glow-cyan,
 .glow-box-cyan,
 .glow-box-indigo,
@@ -187,6 +224,7 @@ button.bg-cyan-500:hover,
   box-shadow: none !important;
 }
 
+/* Disable excessive glowing backdrop blurs */
 .blur-3xl,
 .blur-\[120px\],
 .blur-\[140px\] {
@@ -203,10 +241,10 @@ button.bg-cyan-500:hover,
 .glass-panel-hover:hover {
   border-color: #CBD4C7 !important;
   transform: none !important;
-  box-shadow: 0 1px 3px 0 rgba(29, 41, 35, 0.05) !important;
+  box-shadow: 0 1px 3px 0 rgba(29, 41, 35, 0.04) !important;
 }
 
-/* Clean scrollbar */
+/* Minimalist scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
