@@ -204,6 +204,22 @@ export class FinoraStore {
     }
   }
 
+  static addBill(bill: Omit<Bill, 'id' | 'created_at'>): Bill {
+    const list = this.getBills();
+    const newBill: Bill = {
+      ...bill,
+      id: 'bill-' + Date.now(),
+      created_at: new Date().toISOString(),
+    };
+    this.saveBills([...list, newBill]);
+    return newBill;
+  }
+
+  static deleteBill(id: string): void {
+    const list = this.getBills();
+    this.saveBills(list.filter(b => b.id !== id));
+  }
+
   // Get Investments
   static getInvestments(): Investment[] {
     if (typeof window === 'undefined') return INITIAL_INVESTMENTS;
@@ -223,6 +239,31 @@ export class FinoraStore {
     if (typeof window === 'undefined') return;
     localStorage.setItem(STORAGE_KEYS.INVESTMENTS, JSON.stringify(invs));
     window.dispatchEvent(new Event('finora-data-updated'));
+  }
+
+  static addInvestment(inv: Omit<Investment, 'id' | 'created_at'>): Investment {
+    const list = this.getInvestments();
+    const newInv: Investment = {
+      ...inv,
+      id: 'inv-' + Date.now(),
+      created_at: new Date().toISOString(),
+    };
+    this.saveInvestments([...list, newInv]);
+    return newInv;
+  }
+
+  static updateInvestment(id: string, updates: Partial<Investment>): void {
+    const list = this.getInvestments();
+    const index = list.findIndex(i => i.id === id);
+    if (index !== -1) {
+      list[index] = { ...list[index], ...updates };
+      this.saveInvestments(list);
+    }
+  }
+
+  static deleteInvestment(id: string): void {
+    const list = this.getInvestments();
+    this.saveInvestments(list.filter(i => i.id !== id));
   }
 
   // Reset to initial demo data

@@ -137,11 +137,28 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-600 transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-semibold text-xs shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <span>{loading ? 'Authenticating...' : 'Sign In with Supabase'}</span>
           </button>
         </form>
+
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-slate-800" />
+          </div>
+          <div className="relative flex justify-center text-[10px] uppercase tracking-wider">
+            <span className="bg-[#0c1222] px-3 text-slate-500">Or explore without an account</span>
+          </div>
+        </div>
+
+        <Link
+          href="/dashboard"
+          className="w-full py-2.5 rounded-xl border border-slate-700 hover:border-cyan-500/50 hover:bg-slate-800/50 text-slate-300 hover:text-white font-medium text-xs text-center flex items-center justify-center gap-1.5 transition-all"
+        >
+          <span>Launch Demo Workspace Directly</span>
+          <ArrowRight className="w-3.5 h-3.5 text-cyan-400" />
+        </Link>
 
         <p className="text-center text-xs text-slate-500 mt-6">
           Don&apos;t have an account yet?{' '}

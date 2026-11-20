@@ -79,11 +79,19 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* Mobile Menu Button */}
-          <div className="flex md:hidden">
+          {/* Mobile Actions */}
+          <div className="flex md:hidden items-center gap-2.5">
+            <Link
+              href="/dashboard"
+              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-semibold text-xs shadow-md shadow-cyan-500/25 active:scale-95 transition-all flex items-center gap-1.5"
+            >
+              <span>Launch App</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 text-slate-400 hover:text-white focus:outline-none"
+              aria-label="Toggle navigation menu"
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -125,15 +133,18 @@ export default function Navbar() {
           <div className="pt-4 border-t border-slate-800 flex flex-col gap-3">
             <Link
               href="/login"
-              className="text-center py-2 text-slate-300 hover:text-white"
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-center py-2 text-slate-300 hover:text-white font-medium"
             >
               Sign In
             </Link>
             <Link
               href="/dashboard"
-              className="text-center py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-semibold shadow-md"
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-center py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-indigo-600 text-white font-semibold shadow-md active:scale-95 transition-all flex items-center justify-center gap-1.5"
             >
-              Launch App
+              <span>Launch App</span>
+              <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>

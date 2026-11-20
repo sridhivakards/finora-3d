@@ -4,30 +4,64 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   FINORA DESIGN SYSTEM: OLIVE & WHITE THEME + WCAG AA ACCESSIBILITY
+   ========================================================================== */
+
 :root {
+  /* Surfaces & Canvas */
   --background: #F7F6F0;
-  --foreground: #1D2923;
+  --foreground: #17243A;
   --card: #FFFFFF;
   --secondary: #F0F1E9;
   --border: #E6E5DC;
-  --olive: #244C3B;
-  --olive-sec: #466B56;
+  --border-focus: #244C3B;
+
+  /* Brand Colors */
+  --olive-primary: #244C3B;
+  --olive-secondary: #466B56;
+  --olive-dark: #1D3D30;
   --sage: #A6B6A1;
   --light-sage: #E5EBDD;
+
+  /* Financial Metrics */
   --income: #39845B;
   --expense: #DB896B;
+  --amber-contrast: #92400E;
+
+  /* Text System - Light Surfaces (WCAG AA compliant) */
+  --text-primary-light: #17243A;
+  --text-secondary-light: #46546B;
+  --text-muted-light: #68758A;
+  --text-heading-light: #101C32;
+
+  /* Text System - Dark Contexts (WCAG AA compliant) */
+  --text-primary-dark: #F5F7FF;
+  --text-secondary-dark: #C3CCDD;
+  --text-muted-dark: #9AA8BF;
+  --text-heading-dark: #FFFFFF;
+  --text-accent-dark: #76BFFF;
+  --text-cyan-dark: #62D9F5;
+  --text-emerald-dark: #34D399;
+  --text-rose-dark: #FB7185;
+  --text-amber-dark: #FBBF24;
 }
 
+/* Base Body Styles */
 body {
   background-color: #F7F6F0 !important;
-  color: #1D2923 !important;
+  color: #17243A !important;
   font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* 1. TYPOGRAPHY SYSTEM */
+/* ==========================================================================
+   1. TYPOGRAPHY SYSTEM
+   ========================================================================== */
+
+/* Headings: DM Serif Display */
 h1, h2, h3, h4, h5, h6,
 .font-serif,
 .font-black,
@@ -35,6 +69,7 @@ h1, h2, h3, h4, h5, h6,
   font-family: 'DM Serif Display', Georgia, serif;
 }
 
+/* Body & Interface Text: DM Sans */
 body,
 p,
 span,
@@ -48,6 +83,7 @@ textarea,
   font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
+/* Financial Numbers & Data: IBM Plex Mono */
 .font-mono,
 [class*="font-mono"],
 .tabular-nums,
@@ -59,44 +95,68 @@ div.font-mono {
   font-variant-numeric: tabular-nums;
 }
 
-/* 2. BACKGROUNDS & SURFACES */
-/* Primary background: #F7F6F0 */
+/* ==========================================================================
+   2. BACKGROUNDS & SURFACES MAPPING (Olive & White)
+   ========================================================================== */
+
+/* Primary Base Canvas: #F7F6F0 */
 .bg-\[\#060913\],
-.bg-\[\#060913\]\/85,
-.bg-\[\#080d1e\],
-.bg-\[\#080d1e\]\/80,
-.bg-\[\#04060c\],
 .min-h-screen.bg-\[\#060913\] {
   background-color: #F7F6F0 !important;
 }
 
-/* White surface: #FFFFFF */
+/* White Content Surfaces & Cards: #FFFFFF */
 .bg-\[\#0c1222\],
 .bg-\[\#0c1222\]\/90,
 .bg-\[\#0c1222\]\/80,
 .bg-\[\#0a0f1d\],
-.bg-\[\#0a0f20\] {
+.bg-\[\#0a0f20\],
+.bg-\[\#0c1428\]:not(.dark-surface) {
   background-color: #FFFFFF !important;
   border-color: #E6E5DC !important;
 }
 
-/* Secondary background: #F0F1E9 */
+/* Aside / Sidebar background */
+aside.bg-\[\#0a0f20\] {
+  background-color: #FFFFFF !important;
+  border-color: #E6E5DC !important;
+}
+
+/* Sticky Header Bar on Pages */
+header.bg-\[\#080d1e\]\/80,
+header.bg-\[\#080d1e\]\/85,
+header.bg-\[\#080d1e\]\/95,
+header.bg-\[\#060913\]\/85 {
+  background-color: rgba(247, 246, 240, 0.92) !important;
+  border-color: #E6E5DC !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+/* Secondary Backgrounds & Subtle Inner Boxes: #F0F1E9 */
 .bg-slate-900,
 .bg-slate-900\/90,
 .bg-slate-900\/80,
 .bg-slate-900\/60,
-.bg-\[\#131d36\],
+.bg-slate-900\/50,
+.bg-slate-900\/40,
+.bg-\[\#131d36\]:not(.dark-surface),
 .bg-\[\#090e1d\],
+.bg-\[\#080d1a\],
+.bg-\[\#080d1a\]\/80,
+.bg-\[\#090f20\]:not(.dark-surface),
+.bg-\[\#090f20\]\/90:not(.dark-surface),
+.bg-\[\#0f172e\]:not(.dark-surface),
 .bg-slate-950,
 .bg-slate-950\/40 {
   background-color: #F0F1E9 !important;
   border-color: #E6E5DC !important;
 }
 
-/* Light sage: #E5EBDD for selected navigation, tags and highlights */
-.bg-slate-800,
-.bg-slate-800\/80,
-.bg-slate-800\/60,
+/* Light Sage Highlights & Active Badges: #E5EBDD */
+.bg-slate-800:not(.dark-surface),
+.bg-slate-800\/80:not(.dark-surface),
+.bg-slate-800\/60:not(.dark-surface),
 .bg-cyan-500\/15,
 .bg-cyan-500\/20,
 .bg-cyan-500\/10 {
@@ -105,52 +165,66 @@ div.font-mono {
   border-color: #CBD4C7 !important;
 }
 
-/* 3. BORDERS: #E6E5DC */
+/* Surface Borders: #E6E5DC */
 .border-slate-800,
 .border-slate-800\/80,
 .border-slate-800\/60,
 .border-slate-700,
 .border-slate-700\/80,
+.border-slate-700\/50,
 .border-white\/10,
 .border-white\/5 {
   border-color: #E6E5DC !important;
 }
 
-/* 4. TEXT COLORS */
-/* Primary text: #1D2923 */
-.text-white,
-.text-slate-100,
-.text-slate-200 {
-  color: #1D2923;
+/* ==========================================================================
+   3. TEXT CONTRAST SYSTEM (LIGHT SURFACES)
+   ========================================================================== */
+
+/* Primary Headings & Text: #101C32 / #17243A */
+:not(.dark-surface) > .text-white,
+:not(.dark-surface) > * > .text-white,
+:not(.dark-surface) .text-slate-100,
+:not(.dark-surface) .text-slate-200 {
+  color: #17243A;
 }
 
-/* Secondary text: #777E77 */
-.text-slate-300,
-.text-slate-400,
-.text-slate-500 {
-  color: #777E77 !important;
+h1:not(.dark-surface *),
+h2:not(.dark-surface *),
+h3:not(.dark-surface *),
+h4:not(.dark-surface *) {
+  color: #101C32;
 }
 
-.text-slate-600,
-.text-slate-700 {
-  color: #9A9F98 !important;
+/* Secondary Interface Text: #46546B */
+:not(.dark-surface) .text-slate-300,
+:not(.dark-surface) .text-slate-400 {
+  color: #46546B;
 }
 
-/* Deep olive: #244C3B */
-.text-cyan-400,
-.text-cyan-300 {
-  color: #244C3B !important;
+/* Muted Descriptions: #68758A */
+:not(.dark-surface) .text-slate-500,
+:not(.dark-surface) .text-slate-600 {
+  color: #68758A;
 }
 
-/* Forest green / Sage accents */
-.text-violet-400,
-.text-indigo-400 {
-  color: #466B56 !important;
+/* Deep Olive Accents: #244C3B */
+:not(.dark-surface) .text-cyan-400,
+:not(.dark-surface) .text-cyan-300 {
+  color: #244C3B;
 }
 
-/* Income: #39845B */
+/* Forest Green / Sage accents */
+:not(.dark-surface) .text-violet-400,
+:not(.dark-surface) .text-indigo-400,
+:not(.dark-surface) .text-indigo-300 {
+  color: #466B56;
+}
+
+/* Financial Income: #39845B */
 .text-emerald-400,
-.text-emerald-300 {
+.text-emerald-300,
+.text-emerald-500 {
   color: #39845B !important;
 }
 
@@ -162,9 +236,10 @@ div.font-mono {
   border-color: rgba(57, 132, 91, 0.3) !important;
 }
 
-/* Expenses: #DB896B */
+/* Financial Expenses: #DB896B */
 .text-rose-400,
-.text-rose-300 {
+.text-rose-300,
+.text-rose-500 {
   color: #DB896B !important;
 }
 
@@ -176,22 +251,161 @@ div.font-mono {
   border-color: rgba(219, 137, 107, 0.3) !important;
 }
 
-/* 5. BUTTONS: Deep Olive (#244C3B) with crisp white text */
+/* Amber on Light Surfaces: High Contrast #92400E (4.8:1 WCAG AA) */
+:not(.dark-surface) .text-amber-400,
+:not(.dark-surface) .text-amber-300,
+:not(.dark-surface) .text-amber-500 {
+  color: #92400E;
+}
+
+.bg-amber-500\/10,
+.bg-amber-500\/15,
+.bg-amber-500\/20 {
+  background-color: rgba(180, 83, 9, 0.12) !important;
+  color: #92400E !important;
+  border-color: rgba(180, 83, 9, 0.3) !important;
+}
+
+/* ==========================================================================
+   4. DARK CONTEXTS & 3D OVERLAYS (Guaranteed Light Text Contrast)
+   ========================================================================== */
+
+/* Elements inside preserved dark containers (3D scenes, Preloader, HUDs) */
+.dark-surface,
+[data-theme="dark"],
+.bg-\[\#070b18\],
+.bg-\[\#04060c\],
+.bg-\[\#090e1f\],
+.preloader-dark {
+  color: #F5F7FF !important;
+}
+
+.dark-surface h1,
+.dark-surface h2,
+.dark-surface h3,
+.dark-surface h4,
+.dark-surface .text-white,
+.dark-surface .font-bold.text-white {
+  color: #FFFFFF !important;
+}
+
+.dark-surface p,
+.dark-surface .text-slate-200,
+.dark-surface .text-slate-300 {
+  color: #C3CCDD !important;
+}
+
+.dark-surface .text-slate-400,
+.dark-surface .text-slate-500 {
+  color: #9AA8BF !important;
+}
+
+.dark-surface .text-cyan-400,
+.dark-surface .text-cyan-300 {
+  color: #62D9F5 !important;
+}
+
+.dark-surface .text-violet-400,
+.dark-surface .text-indigo-400,
+.dark-surface .text-indigo-300 {
+  color: #A5B4FC !important;
+}
+
+.dark-surface .text-emerald-400,
+.dark-surface .text-emerald-300 {
+  color: #34D399 !important;
+}
+
+.dark-surface .text-rose-400,
+.dark-surface .text-rose-300 {
+  color: #FB7185 !important;
+}
+
+.dark-surface .text-amber-400,
+.dark-surface .text-amber-300 {
+  color: #FBBF24 !important;
+}
+
+/* ==========================================================================
+   5. FIX ALL HOVER & MOUSE INTERACTIONS (Zero Dark Ash Overlays)
+   ========================================================================== */
+
+/* Remove dark ash/grey background overlays on hover across all interactive elements */
+:not(.dark-surface) .hover\:bg-slate-700:hover,
+:not(.dark-surface) .hover\:bg-slate-800:hover,
+:not(.dark-surface) .hover\:bg-slate-800\/80:hover,
+:not(.dark-surface) .hover\:bg-slate-900:hover,
+:not(.dark-surface) .hover\:bg-slate-900\/60:hover,
+:not(.dark-surface) .hover\:bg-slate-900\/50:hover,
+:not(.dark-surface) .hover\:bg-slate-900\/40:hover,
+:not(.dark-surface) .hover\:bg-\[\#131d36\]:hover,
+:not(.dark-surface) .hover\:bg-\[\#0f172e\]:hover {
+  background-color: #E5EBDD !important;
+  color: #244C3B !important;
+  border-color: #CBD4C7 !important;
+}
+
+/* Ensure icons inside hovered elements remain visible */
+:not(.dark-surface) .hover\:bg-slate-700:hover svg,
+:not(.dark-surface) .hover\:bg-slate-800:hover svg,
+:not(.dark-surface) .hover\:bg-slate-900:hover svg,
+:not(.dark-surface) .hover\:bg-\[\#131d36\]:hover svg {
+  color: #244C3B !important;
+}
+
+/* Interactive card hover: soft elevation & border tint without background shift */
+.group.cursor-pointer:hover,
+:not(.dark-surface) .hover\:border-slate-700:hover,
+:not(.dark-surface) .hover\:border-slate-700\/80:hover {
+  border-color: #CBD4C7 !important;
+  box-shadow: 0 4px 20px -2px rgba(29, 41, 35, 0.08) !important;
+}
+
+/* Table rows: gentle, translucent tint on hover that preserves text readability */
+tr.hover\:bg-slate-900\/50:hover,
+tr.hover\:bg-slate-900:hover,
+tbody tr:hover {
+  background-color: rgba(36, 76, 59, 0.04) !important;
+}
+
+tbody tr:hover td {
+  color: #17243A !important;
+}
+
+/* Dark surface hover effects (clean illumination, never muddy) */
+.dark-surface .hover\:bg-slate-700:hover,
+.dark-surface .hover\:bg-slate-800:hover,
+.dark-surface .hover\:bg-slate-900:hover {
+  background-color: rgba(255, 255, 255, 0.12) !important;
+  color: #FFFFFF !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+/* ==========================================================================
+   6. BUTTONS & CTAs
+   ========================================================================== */
+
+/* Primary Action Buttons: Deep Olive (#244C3B) with crisp white text */
 button.bg-cyan-500,
 .bg-gradient-to-r.from-cyan-500,
-.bg-gradient-to-tr.from-cyan-500 {
+.bg-gradient-to-tr.from-cyan-500,
+.bg-\[\#244C3B\] {
   background-image: none !important;
   background-color: #244C3B !important;
   color: #FFFFFF !important;
+  box-shadow: 0 4px 12px rgba(36, 76, 59, 0.2) !important;
 }
 
 button.bg-cyan-500:hover,
 .bg-gradient-to-r.from-cyan-500:hover,
-.bg-gradient-to-tr.from-cyan-500:hover {
+.bg-gradient-to-tr.from-cyan-500:hover,
+.bg-\[\#244C3B\]:hover {
   background-color: #1D3D30 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 6px 16px rgba(36, 76, 59, 0.3) !important;
 }
 
-/* Ensure text inside olive buttons is white */
+/* Ensure all text and icons inside primary olive buttons are white */
 button.bg-cyan-500 *,
 .bg-gradient-to-r.from-cyan-500 *,
 .bg-gradient-to-tr.from-cyan-500 *,
@@ -199,23 +413,95 @@ button.bg-cyan-500 *,
   color: #FFFFFF !important;
 }
 
-/* 6. FORM INPUTS */
+/* Disabled button state */
+button:disabled,
+button[disabled] {
+  opacity: 0.55 !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+}
+
+/* ==========================================================================
+   7. FORM INPUTS & FOCUS STATES
+   ========================================================================== */
+
 input:not([type="checkbox"]):not([type="radio"]),
 select,
 textarea {
   background-color: #FFFFFF !important;
-  color: #1D2923 !important;
-  border-color: #E6E5DC !important;
+  color: #17243A !important;
+  border: 1px solid #E6E5DC !important;
+  border-radius: 12px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+/* Visible Keyboard Focus Indicators */
 input:focus,
 select:focus,
-textarea:focus {
+textarea:focus,
+button:focus-visible,
+a:focus-visible {
   border-color: #244C3B !important;
-  outline: none !important;
+  outline: 2px solid rgba(36, 76, 59, 0.25) !important;
+  outline-offset: 1px !important;
 }
 
-/* 7. REMOVAL OF UNNECESSARY DECORATIVE EFFECTS */
+/* Select options */
+select option {
+  background-color: #FFFFFF !important;
+  color: #17243A !important;
+}
+
+/* ==========================================================================
+   8. CHARTS & RECHARTS TOOLTIPS (100% Contrast Guarantee)
+   ========================================================================== */
+
+.recharts-default-tooltip {
+  background-color: #FFFFFF !important;
+  border: 1px solid #E6E5DC !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 25px -5px rgba(29, 41, 35, 0.12), 0 0 1px 1px rgba(29, 41, 35, 0.05) !important;
+  color: #17243A !important;
+  padding: 10px 14px !important;
+}
+
+.recharts-tooltip-label {
+  color: #101C32 !important;
+  font-family: 'DM Serif Display', Georgia, serif !important;
+  font-weight: 700 !important;
+  margin-bottom: 6px !important;
+}
+
+.recharts-tooltip-item-name,
+.recharts-tooltip-item-separator {
+  color: #46546B !important;
+  font-family: 'DM Sans', sans-serif !important;
+}
+
+.recharts-tooltip-item-value {
+  color: #244C3B !important;
+  font-family: 'IBM Plex Mono', monospace !important;
+  font-weight: 700 !important;
+}
+
+/* Cartesian Grid subtle contrast */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: #E6E5DC !important;
+  opacity: 0.8 !important;
+}
+
+/* Axis tick labels */
+.recharts-cartesian-axis-tick-value {
+  fill: #46546B !important;
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 11px !important;
+}
+
+/* ==========================================================================
+   9. DECORATIVE CLEANUP & UTILITIES
+   ========================================================================== */
+
 .glow-cyan,
 .glow-box-cyan,
 .glow-box-indigo,
@@ -224,7 +510,7 @@ textarea:focus {
   box-shadow: none !important;
 }
 
-/* Disable excessive glowing backdrop blurs */
+/* Disable excessive glowing backdrop blurs on main page */
 .blur-3xl,
 .blur-\[120px\],
 .blur-\[140px\] {
@@ -244,7 +530,7 @@ textarea:focus {
   box-shadow: 0 1px 3px 0 rgba(29, 41, 35, 0.04) !important;
 }
 
-/* Minimalist scrollbar */
+/* Minimalist Olive & White Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

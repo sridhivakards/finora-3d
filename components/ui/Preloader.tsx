@@ -67,7 +67,7 @@ export default function Preloader({
           initial={{ opacity: 1 }}
           exit={{ opacity: 0, scale: 1.02 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#060913] text-white selection:bg-cyan-500/30 overflow-hidden"
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#060913] text-white selection:bg-cyan-500/30 overflow-hidden dark-surface"
         >
           {/* Ambient Cosmic Radial Glows */}
           <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-cyan-500/15 rounded-full blur-[130px] pointer-events-none" />

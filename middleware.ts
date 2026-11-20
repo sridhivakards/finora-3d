@@ -64,12 +64,7 @@ export async function middleware(req: NextRequest) {
       data: { session },
     } = await supabase.auth.getSession();
 
-    if (isProtected && !session) {
-      const loginUrl = new URL('/login', req.url);
-      loginUrl.searchParams.set('redirectTo', pathname);
-      return NextResponse.redirect(loginUrl);
-    }
-
+    // If authenticated user visits login/signup, redirect to dashboard
     if (isAuthOnly && session) {
       return NextResponse.redirect(new URL('/dashboard', req.url));
     }
