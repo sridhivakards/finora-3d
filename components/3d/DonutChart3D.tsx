@@ -671,7 +671,7 @@ export default function DonutChart3D({
           } z-30 pointer-events-auto max-w-[210px] sm:max-w-xs animate-in fade-in duration-300`}
         >
           <div
-            className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-b from-[#0c142b]/95 via-[#090f20]/95 to-[#060913]/95 border shadow-2xl backdrop-blur-xl space-y-2.5 relative overflow-hidden dark-surface"
+            className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-b from-[#0c142b]/95 via-[#090f20]/95 to-[#060913]/95 border shadow-2xl backdrop-blur-xl space-y-2.5 relative overflow-hidden"
             style={{
               borderColor: `${activeCategory.color}80`,
               boxShadow: `0 10px 30px -5px rgba(0, 0, 0, 0.7), 0 0 20px ${activeCategory.color}35`,
@@ -745,7 +745,7 @@ export default function DonutChart3D({
       {/* Bottom Telemetry HUD */}
       {bottomTag && (
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 pointer-events-none text-center z-10 w-full px-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/85 border border-cyan-500/30 backdrop-blur-md text-[10px] sm:text-[11px] font-mono text-cyan-300 shadow-xl dark-surface">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/85 border border-cyan-500/30 backdrop-blur-md text-[10px] sm:text-[11px] font-mono text-cyan-300 shadow-xl">
             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
             <span>{bottomTag}</span>
           </div>

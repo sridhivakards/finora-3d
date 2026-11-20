@@ -223,7 +223,7 @@ export default function InvestmentsPage() {
                 </span>
               </div>
 
-              <div className="h-80 w-full relative flex items-center justify-center my-1 rounded-xl overflow-hidden bg-[#070b18]/60 border border-slate-800/60 dark-surface">
+              <div className="h-80 w-full relative flex items-center justify-center my-1 rounded-xl overflow-hidden bg-[#070b18]/60 border border-slate-800/60">
                 {investment3DData.length === 0 ? (
                   <p className="text-xs text-slate-500">No investment holdings to show</p>
                 ) : (

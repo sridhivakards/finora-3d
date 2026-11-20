@@ -437,7 +437,7 @@ export default function DashboardPage() {
                               boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(6, 182, 212, 0.25)',
                             }}
                             itemStyle={{ fontWeight: 600 }}
-                            labelStyle={{ color: '#101C32', fontWeight: 700 }}
+                            labelStyle={{ color: '#ffffff', fontWeight: 700 }}
                             formatter={(value: any, name: any) => [
                               formatINR(Number(value)),
                               name === 'Income' ? 'Monthly Income' : 'Monthly Expenses',
@@ -486,7 +486,7 @@ export default function DashboardPage() {
                               boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(6, 182, 212, 0.25)',
                             }}
                             itemStyle={{ color: '#38bdf8', fontWeight: 600 }}
-                            labelStyle={{ color: '#101C32', fontWeight: 700 }}
+                            labelStyle={{ color: '#ffffff', fontWeight: 700 }}
                             formatter={(value: any) => [formatINR(Number(value)), '']}
                           />
                           <Bar
@@ -524,7 +524,7 @@ export default function DashboardPage() {
                     </span>
                   </div>
 
-                  <div className="h-80 w-full relative flex items-center justify-center my-1 rounded-xl overflow-hidden bg-[#070b18]/60 border border-slate-800/60 dark-surface">
+                  <div className="h-80 w-full relative flex items-center justify-center my-1 rounded-xl overflow-hidden bg-[#070b18]/60 border border-slate-800/60">
                     {expense3DData.length === 0 ? (
                       <p className="text-xs text-slate-500">No expense categories to show</p>
                     ) : (

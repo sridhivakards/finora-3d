@@ -139,7 +139,7 @@ export default function UniversePage() {
               ].map((item, i) => (
                 <div
                   key={i}
-                  className={`p-2.5 rounded-xl bg-slate-900/80 backdrop-blur-md border ${item.border} text-center dark-surface`}
+                  className={`p-2.5 rounded-xl bg-slate-900/80 backdrop-blur-md border ${item.border} text-center`}
                 >
                   <div className="text-[10px] text-slate-400 font-medium">{item.label}</div>
                   <div className={`text-xs font-bold font-mono mt-0.5 ${item.color}`}>
