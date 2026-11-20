@@ -6,6 +6,7 @@ import DashboardSidebar from '@/components/DashboardSidebar';
 import MoneyUniverseScene, { UniverseNodeData } from '@/components/3d/MoneyUniverseScene';
 import GlitterWarp from '@/components/ui/GlitterWarp';
 import { db } from '@/lib/db';
+import { FinoraStore } from '@/lib/storage';
 import { formatINR } from '@/lib/utils';
 import {
   Orbit,
@@ -34,6 +35,31 @@ export default function UniversePage() {
 
   const refreshData = async () => {
     try {
+      // 1. Instant local render (0ms)
+      const localTxs = FinoraStore.getTransactions();
+      const localInvs = FinoraStore.getInvestments();
+      const localBills = FinoraStore.getBills();
+      const localGoals = FinoraStore.getGoals();
+      const localS = db.computeSummary(localTxs);
+      const totalInvInit = localInvs.reduce((sum, i) => sum + i.current_value, 0);
+      const totalBillsInit = localBills.reduce((sum, b) => sum + b.amount, 0);
+      const totalGoalsInit = localGoals.reduce((sum, g) => sum + g.current_amount, 0);
+
+      setSummary({
+        income: localS.totalIncome,
+        expenses: localS.totalExpenses,
+        balance: localS.currentBalance,
+        investments: totalInvInit,
+        bills: totalBillsInit,
+        goals: totalGoalsInit,
+      });
+
+      const initialScore = Math.min(99, Math.max(15,
+        50 + (localS.savingsRate >= 50 ? 25 : localS.savingsRate >= 25 ? 18 : localS.savingsRate > 0 ? 8 : -15)
+      ));
+      setScore(localTxs.length > 0 ? initialScore : 0);
+
+      // 2. In background, sync with cloud db
       const [txs, invs, bls, gls] = await Promise.all([
         db.transactions.list(),
         db.investments.list(),
@@ -54,12 +80,11 @@ export default function UniversePage() {
         goals: totalGoals,
       });
 
-      // Compute health score from real savings rate
       const sc = Math.min(99, Math.max(15,
         50 + (s.savingsRate >= 50 ? 25 : s.savingsRate >= 25 ? 18 : s.savingsRate > 0 ? 8 : -15)
       ));
       setScore(txs.length > 0 ? sc : 0);
-    } catch { /* show zeros on error */ }
+    } catch { /* keep showing local data */ }
   };
 
   useEffect(() => {

@@ -24,6 +24,9 @@ import type {
 
 // ─── Supabase client helper ───────────────────────────────────────────────────
 
+let cachedUser: any = undefined;
+let userCheckPromise: Promise<any> | null = null;
+
 function getSupabaseClient() {
   try {
     return createClient();
@@ -32,16 +35,42 @@ function getSupabaseClient() {
   }
 }
 
+async function withTimeout<T>(promise: Promise<T>, ms = 1500): Promise<T> {
+  let timer: any;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('Supabase operation timed out')), ms);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timer));
+}
+
 async function getAuthenticatedUser() {
-  try {
-    const supabase = getSupabaseClient();
-    if (!supabase) return null;
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (error || !user) return null;
-    return user;
-  } catch {
+  if (cachedUser !== undefined) return cachedUser;
+  if (userCheckPromise) return userCheckPromise;
+
+  userCheckPromise = (async () => {
+    try {
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        cachedUser = null;
+        return null;
+      }
+
+      // Fast 1.2s timeout so pages load instantly if Supabase is offline or paused
+      const res = await withTimeout(supabase.auth.getUser(), 1200);
+      if (res?.data?.user) {
+        cachedUser = res.data.user;
+        return cachedUser;
+      }
+    } catch {
+      // Supabase unreachable or paused
+    }
+    cachedUser = null;
     return null;
-  }
+  })();
+
+  const result = await userCheckPromise;
+  userCheckPromise = null;
+  return result;
 }
 
 // ─── Financial Summary ────────────────────────────────────────────────────────

@@ -7,6 +7,7 @@ import AddTransactionModal from '@/components/AddTransactionModal';
 import DonutChart3D, { ExpenseCategory } from '@/components/3d/DonutChart3D';
 import GlitterWarp from '@/components/ui/GlitterWarp';
 import { db, FinancialSummary } from '@/lib/db';
+import { FinoraStore } from '@/lib/storage';
 import { formatINR, formatDate } from '@/lib/utils';
 import { Transaction, FinancialHealthScore } from '@/lib/types';
 import {
@@ -73,37 +74,45 @@ export default function DashboardPage() {
   });
   const [cashflowTrend, setCashflowTrend] = useState<{ month: string; Income: number; Expenses: number }[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const [error, setError] = useState('');
 
   const loadData = async () => {
     try {
       setError('');
-      const [txs, trend] = await Promise.all([
-        db.transactions.list(),
-        db.transactions.getMonthlyTrend(),
-      ]);
-      const sum = db.computeSummary(txs);
-      setTransactions(txs);
+      // 1. Instant local render (0ms - zero wait)
+      const localTxs = FinoraStore.getTransactions();
+      const sum = db.computeSummary(localTxs);
+      setTransactions(localTxs);
       setSummary(sum);
-      setCashflowTrend(trend);
+      setLoading(false);
 
-      // Compute health score from real data
       const score = Math.min(99, Math.max(15,
         50 +
         (sum.savingsRate >= 50 ? 25 : sum.savingsRate >= 25 ? 18 : sum.savingsRate > 0 ? 8 : -15) +
-        (txs.filter(t => t.is_unusual).length === 0 ? 10 : -5)
+        (localTxs.filter(t => t.is_unusual).length === 0 ? 10 : -5)
       ));
       const rating: FinancialHealthScore['rating'] =
         score >= 80 ? 'Excellent' : score >= 65 ? 'Good' : score >= 45 ? 'Fair' : 'Poor';
       setHealth({
         score,
         rating,
-        explanation: txs.length === 0
+        explanation: localTxs.length === 0
           ? 'Add transactions to generate your financial health score.'
           : `Your financial health score is ${score}/100. Savings rate: ${sum.savingsRate}%.`,
         factors: []
       });
+
+      // 2. In background, sync with cloud db if available
+      const [txs, trend] = await Promise.all([
+        db.transactions.list(),
+        db.transactions.getMonthlyTrend(),
+      ]);
+      const updatedSum = db.computeSummary(txs);
+      setTransactions(txs);
+      setSummary(updatedSum);
+      setCashflowTrend(trend);
 
       // Fetch ML prediction
       if (txs.length > 0) {
@@ -123,13 +132,14 @@ export default function DashboardPage() {
         }
       }
     } catch (err: any) {
-      setError(err?.message ?? 'Failed to load data. Please refresh.');
+      // Keep displaying local store data
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    setIsClient(true);
     loadData();
   }, []);
 
@@ -207,13 +217,15 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-[#060913] text-slate-100 flex relative overflow-hidden selection:bg-cyan-500/30 selection:text-cyan-200">
       {/* GLOBAL FULL WEBSITE BACKGROUND MOTION (GLITTER WARP) */}
-      <GlitterWarp
-        isFixed={true}
-        speed={0.6}
-        particleCount={200}
-        warpFactor={1.1}
-        colors={['#06b6d4', '#22d3ee', '#6366f1', '#8b5cf6', '#f59e0b', '#38bdf8']}
-      />
+      {isClient && (
+        <GlitterWarp
+          isFixed={true}
+          speed={0.6}
+          particleCount={200}
+          warpFactor={1.1}
+          colors={['#06b6d4', '#22d3ee', '#6366f1', '#8b5cf6', '#f59e0b', '#38bdf8']}
+        />
+      )}
 
       {/* Ambient atmospheric glows matching Landing Page */}
       <div className="fixed top-1/4 -left-48 w-96 h-96 bg-cyan-600/15 rounded-full blur-[140px] pointer-events-none" />
