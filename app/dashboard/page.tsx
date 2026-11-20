@@ -5,6 +5,7 @@ import Link from 'next/link';
 import DashboardSidebar from '@/components/DashboardSidebar';
 import AddTransactionModal from '@/components/AddTransactionModal';
 import DonutChart3D, { ExpenseCategory } from '@/components/3d/DonutChart3D';
+import GlitterWarp from '@/components/ui/GlitterWarp';
 import { db, FinancialSummary } from '@/lib/db';
 import { formatINR, formatDate } from '@/lib/utils';
 import { Transaction, FinancialHealthScore } from '@/lib/types';
@@ -204,23 +205,40 @@ export default function DashboardPage() {
   const isEmpty = transactions.length === 0;
 
   return (
-    <div className="min-h-screen bg-[#060913] text-slate-100 flex">
+    <div className="min-h-screen bg-[#060913] text-slate-100 flex relative overflow-hidden selection:bg-cyan-500/30 selection:text-cyan-200">
+      {/* GLOBAL FULL WEBSITE BACKGROUND MOTION (GLITTER WARP) */}
+      <GlitterWarp
+        isFixed={true}
+        speed={0.6}
+        particleCount={200}
+        warpFactor={1.1}
+        colors={['#06b6d4', '#22d3ee', '#6366f1', '#8b5cf6', '#f59e0b', '#38bdf8']}
+      />
+
+      {/* Ambient atmospheric glows matching Landing Page */}
+      <div className="fixed top-1/4 -left-48 w-96 h-96 bg-cyan-600/15 rounded-full blur-[140px] pointer-events-none" />
+      <div className="fixed top-1/3 -right-48 w-96 h-96 bg-indigo-600/15 rounded-full blur-[140px] pointer-events-none" />
+      <div className="fixed bottom-10 left-1/3 w-80 h-80 bg-violet-600/10 rounded-full blur-[140px] pointer-events-none" />
+
       {/* Sidebar */}
       <DashboardSidebar />
 
       {/* Main Content Area */}
-      <main className="flex-1 lg:pl-64 pt-16 lg:pt-0 min-h-screen flex flex-col">
+      <main className="flex-1 lg:pl-64 pt-16 lg:pt-0 min-h-screen flex flex-col relative z-10">
         {/* Top Header */}
-        <header className="px-6 lg:px-10 py-6 border-b border-slate-800/80 bg-[#080d1e]/80 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-0 z-20">
+        <header className="px-6 lg:px-10 py-6 border-b border-slate-800/80 bg-[#060913]/85 backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-0 z-20">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                FINORA
-              </span>
-              <span className="text-xs text-slate-400">• Financial Intelligence</span>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-semibold backdrop-blur-md">
+                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                <span>Finora OS • Financial Intelligence</span>
+              </div>
             </div>
-            <h1 className="text-2xl font-black tracking-tight text-white mt-1">
-              Financial Dashboard
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mt-1">
+              Financial{' '}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400">
+                Dashboard
+              </span>
             </h1>
             <p className="text-xs text-slate-400">Your personal financial overview</p>
           </div>
@@ -268,17 +286,17 @@ export default function DashboardPage() {
             </div>
           ) : (
             <>
-              {/* 5 Main Financial Cards (Section 5) */}
+              {/* 5 Main Financial Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 {/* 1. Total Income */}
-                <div className="p-5 rounded-2xl bg-[#0c1222] border border-slate-800 hover:border-emerald-500/40 transition-all shadow-lg group">
+                <div className="p-5 rounded-2xl bg-[#0c1222]/85 border border-slate-800/80 hover:border-emerald-500/50 backdrop-blur-xl transition-all shadow-xl hover:shadow-emerald-500/10 group">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-medium text-slate-400">Total Income</span>
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
                       <TrendingUp className="w-4 h-4" />
                     </div>
                   </div>
-                  <div className="text-2xl font-black tracking-tight text-white">
+                  <div className="text-2xl font-black tracking-tight text-white font-mono">
                     {formatINR(summary.totalIncome)}
                   </div>
                   <div className="mt-2 flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
@@ -288,14 +306,14 @@ export default function DashboardPage() {
                 </div>
 
                 {/* 2. Total Expenses */}
-                <div className="p-5 rounded-2xl bg-[#0c1222] border border-slate-800 hover:border-rose-500/40 transition-all shadow-lg group">
+                <div className="p-5 rounded-2xl bg-[#0c1222]/85 border border-slate-800/80 hover:border-rose-500/50 backdrop-blur-xl transition-all shadow-xl hover:shadow-rose-500/10 group">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-medium text-slate-400">Total Expenses</span>
-                    <div className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <div className="w-8 h-8 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center group-hover:scale-110 transition-transform">
                       <TrendingDown className="w-4 h-4" />
                     </div>
                   </div>
-                  <div className="text-2xl font-black tracking-tight text-white">
+                  <div className="text-2xl font-black tracking-tight text-white font-mono">
                     {formatINR(summary.totalExpenses)}
                   </div>
                   <div className="mt-2 flex items-center gap-1.5 text-xs text-rose-400 font-medium">
@@ -305,14 +323,14 @@ export default function DashboardPage() {
                 </div>
 
                 {/* 3. Current Balance */}
-                <div className="p-5 rounded-2xl bg-[#0c1222] border border-slate-800 hover:border-cyan-500/40 transition-all shadow-lg group">
+                <div className="p-5 rounded-2xl bg-[#0c1222]/85 border border-slate-800/80 hover:border-cyan-500/50 backdrop-blur-xl transition-all shadow-xl hover:shadow-cyan-500/10 group">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-medium text-slate-400">Current Balance</span>
-                    <div className="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center justify-center group-hover:scale-110 transition-transform">
                       <Wallet className="w-4 h-4" />
                     </div>
                   </div>
-                  <div className="text-2xl font-black tracking-tight text-cyan-300">
+                  <div className="text-2xl font-black tracking-tight text-cyan-300 font-mono">
                     {formatINR(summary.currentBalance)}
                   </div>
                   <div className="mt-2 flex items-center gap-1.5 text-xs text-cyan-400 font-medium">
@@ -321,14 +339,14 @@ export default function DashboardPage() {
                 </div>
 
                 {/* 4. Savings Rate */}
-                <div className="p-5 rounded-2xl bg-[#0c1222] border border-slate-800 hover:border-indigo-500/40 transition-all shadow-lg group">
+                <div className="p-5 rounded-2xl bg-[#0c1222]/85 border border-slate-800/80 hover:border-indigo-500/50 backdrop-blur-xl transition-all shadow-xl hover:shadow-indigo-500/10 group">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-medium text-slate-400">Savings Rate</span>
-                    <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 flex items-center justify-center group-hover:scale-110 transition-transform">
                       <PiggyBank className="w-4 h-4" />
                     </div>
                   </div>
-                  <div className="text-2xl font-black tracking-tight text-indigo-300">
+                  <div className="text-2xl font-black tracking-tight text-indigo-300 font-mono">
                     {summary.savingsRate}%
                   </div>
                   <div className="mt-2 flex items-center gap-1.5 text-xs text-indigo-400 font-medium">
@@ -337,15 +355,15 @@ export default function DashboardPage() {
                 </div>
 
                 {/* 5. Next Month Prediction */}
-                <div className="p-5 rounded-2xl bg-[#0c1222] border border-slate-800 hover:border-amber-500/40 transition-all shadow-lg group relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-xl pointer-events-none" />
+                <div className="p-5 rounded-2xl bg-[#0c1222]/85 border border-slate-800/80 hover:border-amber-500/50 backdrop-blur-xl transition-all shadow-xl hover:shadow-amber-500/10 group relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-xl pointer-events-none" />
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-medium text-slate-400">ML Forecast</span>
-                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center group-hover:scale-110 transition-transform">
                       <Brain className="w-4 h-4" />
                     </div>
                   </div>
-                  <div className="text-2xl font-black tracking-tight text-amber-300">
+                  <div className="text-2xl font-black tracking-tight text-amber-300 font-mono">
                     {nextMonthPrediction > 0 ? formatINR(nextMonthPrediction) : '—'}
                   </div>
                   <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-400 font-medium">
@@ -358,7 +376,7 @@ export default function DashboardPage() {
               {/* Charts Section: Income vs Expenses & Category Breakdown */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {/* Income vs Expenses Chart (7 cols) - Line & Bar with zero white cursor background */}
-                <div className="lg:col-span-7 p-6 rounded-2xl bg-[#0c1222] border border-slate-800 shadow-xl">
+                <div className="lg:col-span-7 p-6 rounded-3xl bg-[#0c1222]/85 border border-slate-800/80 backdrop-blur-xl shadow-2xl">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div>
                       <h3 className="text-base font-bold text-white">Income vs Expenses</h3>
@@ -510,7 +528,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* 360° 3D Donut Chart: Spending by Category (5 cols) */}
-                <div className="lg:col-span-5 p-6 rounded-2xl bg-[#0c1222] border border-slate-800 shadow-xl flex flex-col justify-between">
+                <div className="lg:col-span-5 p-6 rounded-3xl bg-[#0c1222]/85 border border-slate-800/80 backdrop-blur-xl shadow-2xl flex flex-col justify-between">
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <div className="flex items-center gap-2">
@@ -567,7 +585,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Financial Health Section (Section 7) */}
-              <div className="p-6 lg:p-8 rounded-2xl bg-gradient-to-br from-[#0c1222] via-[#0e162e] to-[#0c1222] border border-cyan-500/20 shadow-2xl relative overflow-hidden">
+              <div className="p-6 lg:p-8 rounded-3xl bg-gradient-to-br from-[#0c1222]/90 via-[#0e162e]/90 to-[#0c1222]/90 border border-cyan-500/30 backdrop-blur-xl shadow-2xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-80 h-80 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
 
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-800">
@@ -628,7 +646,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Recent Transactions List with Outlier Warnings */}
-              <div className="p-6 rounded-2xl bg-[#0c1222] border border-slate-800 shadow-xl">
+              <div className="p-6 lg:p-8 rounded-3xl bg-[#0c1222]/85 border border-slate-800/80 backdrop-blur-xl shadow-2xl">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-base font-bold text-white">Recent Transactions</h3>

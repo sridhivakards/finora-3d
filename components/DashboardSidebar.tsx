@@ -102,7 +102,7 @@ export default function DashboardSidebar() {
 
       {/* Main Sidebar Desktop + Mobile Drawer */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-40 w-64 bg-[#0a0f20] border-r border-slate-800/80 flex flex-col transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed top-0 bottom-0 left-0 z-40 w-64 bg-[#060913]/90 backdrop-blur-2xl border-r border-slate-800/80 flex flex-col transition-transform duration-300 lg:translate-x-0 ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -147,7 +147,7 @@ export default function DashboardSidebar() {
                 onClick={() => setMobileOpen(false)}
                 className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all ${
                   isActive
-                    ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shadow-sm'
+                    ? 'bg-gradient-to-r from-cyan-500/20 via-indigo-600/15 to-transparent text-cyan-300 border-l-2 border-cyan-400 font-semibold shadow-sm shadow-cyan-500/10'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
                 }`}
               >
